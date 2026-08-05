@@ -51,7 +51,7 @@ export default function PistaForm({ casoId, onSuccess }: PistaFormProps) {
         multiline 
         label="Descripción de la Pista" 
         value={descripcion} 
-        onChange={(e) => setDescripcion(e.target.value)} 
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescripcion(e.target.value)} 
         placeholder="Ej: Lo vi caminando cerca de..." 
         required 
       />
