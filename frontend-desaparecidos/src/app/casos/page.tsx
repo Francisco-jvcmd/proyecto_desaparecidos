@@ -5,18 +5,18 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import { comunidadApi } from '@/lib/api';
 
+// Mock data as fallback
+const mockCasos = [
+  { id: '1', nombre: 'Juan Pérez', edad: 35, fecha: '2023-10-12', parroquia: 'La Mariscal' },
+  { id: '2', nombre: 'María Gómez', edad: 22, fecha: '2023-11-05', parroquia: 'Calderón' },
+  { id: '3', nombre: 'Carlos López', edad: 45, fecha: '2023-11-20', parroquia: 'Quitumbe' },
+  { id: '4', nombre: 'Ana Torres', edad: 19, fecha: '2024-01-10', parroquia: 'Tumbaco' },
+  { id: '5', nombre: 'Luis Simbaña', edad: 60, fecha: '2024-02-15', parroquia: 'Chillogallo' },
+];
+
 export default function CasosPage() {
   const [casos, setCasos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Mock data as fallback
-  const mockCasos = [
-    { id: '1', nombre: 'Juan Pérez', edad: 35, fecha: '2023-10-12', parroquia: 'La Mariscal' },
-    { id: '2', nombre: 'María Gómez', edad: 22, fecha: '2023-11-05', parroquia: 'Calderón' },
-    { id: '3', nombre: 'Carlos López', edad: 45, fecha: '2023-11-20', parroquia: 'Quitumbe' },
-    { id: '4', nombre: 'Ana Torres', edad: 19, fecha: '2024-01-10', parroquia: 'Tumbaco' },
-    { id: '5', nombre: 'Luis Simbaña', edad: 60, fecha: '2024-02-15', parroquia: 'Chillogallo' },
-  ];
 
   useEffect(() => {
     const fetchCasos = async () => {
