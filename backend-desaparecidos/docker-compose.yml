@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: desaparecidos_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: desaparecidos_db
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password_local
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d desaparecidos_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
