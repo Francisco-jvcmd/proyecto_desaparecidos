@@ -17,8 +17,8 @@ export default function NavBar() {
       if (logged) {
         setIsAdminUser(isAdmin());
         const user = getUser();
-        if (user && user.role) {
-          setUserRole(user.role);
+        if (user && user.rol) {
+          setUserRole(user.rol);
         }
       }
     };
