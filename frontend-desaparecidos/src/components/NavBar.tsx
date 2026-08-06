@@ -43,7 +43,22 @@ export default function NavBar() {
         <li><Link href="/registro">Reportar</Link></li>
         <li><Link href="/privacidad">Privacidad</Link></li>
         {!isLogged ? (
-          <li><Link href="/login">Ingresar</Link></li>
+          <>
+            <li><Link href="/login">Ingresar</Link></li>
+            <li>
+              <Link href="/registro-familiar" style={{
+                background: 'linear-gradient(135deg, var(--color-accent), var(--color-info))',
+                color: 'white',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                transition: 'opacity 0.2s'
+              }}>
+                Registrarse
+              </Link>
+            </li>
+          </>
         ) : (
           <>
             {userRole && (
@@ -62,6 +77,7 @@ export default function NavBar() {
               </li>
             )}
             {isAdminUser && <li><Link href="/admin">Admin</Link></li>}
+            {!isAdminUser && <li><Link href="/casos">Mis Casos</Link></li>}
             <li>
               <button 
                 onClick={handleLogout}
