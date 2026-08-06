@@ -21,6 +21,8 @@ export default function RegistroForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -29,6 +31,23 @@ export default function RegistroForm() {
   
   const handleLocation = (loc: { lat: number, lng: number }) => {
     setFormData(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen no debe superar los 5MB.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Solo se permiten imágenes JPG, PNG o WebP.');
+      return;
+    }
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const validate = () => {
@@ -80,6 +99,76 @@ export default function RegistroForm() {
             </select>
           </div>
           <Input label="Fecha de Desaparición" name="fechaDesaparicion" type="date" value={formData.fechaDesaparicion} onChange={handleInputChange} required />
+        </div>
+      </div>
+      
+      <div className="form-section">
+        <h3 className="form-section-title">Fotografía de la Persona</h3>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '24px',
+          border: '2px dashed var(--border-glass)',
+          borderRadius: '12px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          cursor: 'pointer',
+          transition: 'border-color 0.3s'
+        }}>
+          {photoPreview ? (
+            <div style={{ position: 'relative' }}>
+              <img
+                src={photoPreview}
+                alt="Vista previa"
+                style={{
+                  width: '180px',
+                  height: '220px',
+                  objectFit: 'cover',
+                  borderRadius: '12px',
+                  border: '2px solid var(--color-accent)'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => { setPhotoPreview(null); setPhotoFile(null); }}
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  background: 'var(--color-danger)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '28px',
+                  height: '28px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <label style={{ cursor: 'pointer', textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '8px' }}>📷</div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '4px' }}>
+                Haz clic para seleccionar una foto
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                JPG, PNG o WebP • Máx. 5MB
+              </p>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhotoChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+          )}
         </div>
       </div>
       

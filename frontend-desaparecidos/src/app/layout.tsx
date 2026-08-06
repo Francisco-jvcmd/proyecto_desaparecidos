@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import '@/styles/globals.css';
 import Link from 'next/link';
+import NavBar from '@/components/NavBar';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
@@ -20,20 +21,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${inter.variable} ${outfit.variable}`}>
       <body>
-        <nav className="navbar">
-          <Link href="/" className="navbar-brand">
-            <span className="brand-icon">🔍</span>
-            <span>DMQ Desaparecidos</span>
-          </Link>
-          <ul className="navbar-nav">
-            <li><Link href="/">Inicio</Link></li>
-            <li><Link href="/casos">Casos</Link></li>
-            <li><Link href="/registro">Reportar</Link></li>
-            <li><Link href="/privacidad">Privacidad</Link></li>
-            <li><Link href="/login">Ingresar</Link></li>
-            <li><Link href="/admin">Admin</Link></li>
-          </ul>
-        </nav>
+        <NavBar />
         
         <main style={{ paddingTop: '73px' }}>
           {children}

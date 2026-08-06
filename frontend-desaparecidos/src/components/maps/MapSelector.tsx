@@ -14,6 +14,38 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
   const marker = useRef<maplibregl.Marker | null>(null);
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [error, setError] = useState('');
+  const [isSatellite, setIsSatellite] = useState(false);
+
+  const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+  const STYLE_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+
+  const toggleMapStyle = () => {
+    if (!map.current) return;
+    const newIsSatellite = !isSatellite;
+    setIsSatellite(newIsSatellite);
+    if (newIsSatellite) {
+      map.current.setStyle({
+        version: 8,
+        sources: {
+          'esri-satellite': {
+            type: 'raster',
+            tiles: [STYLE_SATELLITE],
+            tileSize: 256,
+            attribution: '© Esri'
+          }
+        },
+        layers: [{
+          id: 'esri-satellite-layer',
+          type: 'raster',
+          source: 'esri-satellite',
+          minzoom: 0,
+          maxzoom: 19
+        }]
+      });
+    } else {
+      map.current.setStyle(STYLE_DARK);
+    }
+  };
 
   // Función reutilizable para adjuntar listener de dragend con validación DMQ
   const attachDragEndListener = (m: maplibregl.Marker) => {
@@ -113,7 +145,30 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
       >
         📍 Usar mi ubicación
       </button>
-      <div ref={mapContainer} className="map-container" />
+      <div style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={toggleMapStyle}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            zIndex: 10,
+            padding: '8px 14px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,255,255,0.2)',
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            cursor: 'pointer',
+            fontSize: '0.8125rem',
+            backdropFilter: 'blur(4px)',
+            transition: 'all 0.2s'
+          }}
+        >
+          {isSatellite ? '🗺️ Mapa' : '🛰️ Satélite'}
+        </button>
+        <div ref={mapContainer} className="map-container" />
+      </div>
       {error && <span style={{ color: 'var(--color-danger)', fontSize: '0.875rem' }}>{error}</span>}
       {coords && (
         <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
