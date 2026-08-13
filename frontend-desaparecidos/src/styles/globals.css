@@ -415,6 +415,12 @@ select.input-field {
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border-glass);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.map-container canvas {
+  filter: contrast(1.06) saturate(1.08) brightness(1.02);
+  transition: filter 0.3s ease;
 }
 
 .map-container.map-full {

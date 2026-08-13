@@ -8,68 +8,70 @@ interface MapSelectorProps {
   onLocationSelect: (loc: { lat: number; lng: number }) => void;
 }
 
+const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+
+const STYLE_SATELLITE_HYBRID: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'esri-satellite': {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 18,
+      attribution: '© Esri, Maxar, Earthstar Geographics'
+    },
+    'esri-transportation': {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 18
+    },
+    'esri-labels': {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 18
+    }
+  },
+  layers: [
+    {
+      id: 'esri-satellite-layer',
+      type: 'raster',
+      source: 'esri-satellite',
+      minzoom: 0,
+      maxzoom: 19
+    },
+    {
+      id: 'esri-transportation-layer',
+      type: 'raster',
+      source: 'esri-transportation',
+      minzoom: 0,
+      maxzoom: 19
+    },
+    {
+      id: 'esri-labels-layer',
+      type: 'raster',
+      source: 'esri-labels',
+      minzoom: 0,
+      maxzoom: 19
+    }
+  ]
+};
+
 export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const marker = useRef<maplibregl.Marker | null>(null);
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [error, setError] = useState('');
-  const [isSatellite, setIsSatellite] = useState(false);
-
-  const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+  const [isSatellite, setIsSatellite] = useState(true);
 
   const toggleMapStyle = () => {
     if (!map.current) return;
     const newIsSatellite = !isSatellite;
     setIsSatellite(newIsSatellite);
     if (newIsSatellite) {
-      map.current.setStyle({
-        version: 8,
-        sources: {
-          'esri-satellite': {
-            type: 'raster',
-            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            maxzoom: 18,
-            attribution: '© Esri, Maxar, Earthstar Geographics'
-          },
-          'esri-transportation': {
-            type: 'raster',
-            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            maxzoom: 18
-          },
-          'esri-labels': {
-            type: 'raster',
-            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            maxzoom: 18
-          }
-        },
-        layers: [
-          {
-            id: 'esri-satellite-layer',
-            type: 'raster',
-            source: 'esri-satellite',
-            minzoom: 0,
-            maxzoom: 19
-          },
-          {
-            id: 'esri-transportation-layer',
-            type: 'raster',
-            source: 'esri-transportation',
-            minzoom: 0,
-            maxzoom: 19
-          },
-          {
-            id: 'esri-labels-layer',
-            type: 'raster',
-            source: 'esri-labels',
-            minzoom: 0,
-            maxzoom: 19
-          }
-        ]
-      });
+      map.current.setStyle(STYLE_SATELLITE_HYBRID);
     } else {
       map.current.setStyle(STYLE_DARK);
     }
@@ -96,12 +98,15 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
+    const pixelRatio = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      style: STYLE_SATELLITE_HYBRID,
       center: [-78.4678, -0.1807], // Centro de Quito
-      zoom: 12,
-      maxZoom: 18
+      zoom: 13,
+      maxZoom: 18,
+      pixelRatio
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -128,7 +133,7 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
 
     return () => {
       map.current?.remove();
-      map.current = null; // Fix: Reset ref to allow re-initialization in Strict Mode
+      map.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -147,14 +152,14 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
         return;
       }
 
-      map.current?.flyTo({ center: [lng, lat], zoom: 15 });
+      map.current?.flyTo({ center: [lng, lat], zoom: 16 });
       if (marker.current) {
         marker.current.setLngLat([lng, lat]);
       } else {
         marker.current = new maplibregl.Marker({ draggable: true, color: '#f59e0b' })
           .setLngLat([lng, lat])
           .addTo(map.current!);
-        attachDragEndListener(marker.current); // Fix: attach listener for geolocation marker
+        attachDragEndListener(marker.current);
       }
       setCoords({ lat, lng });
       onLocationSelect({ lat, lng });
@@ -170,9 +175,9 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
         type="button" 
         onClick={handleGeolocation}
         className="btn"
-        style={{ alignSelf: 'flex-start', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--color-info)' }}
+        style={{ alignSelf: 'flex-start', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--color-info)', border: '1px solid rgba(59, 130, 246, 0.3)' }}
       >
-        📍 Usar mi ubicación
+        📍 Usar mi ubicación actual
       </button>
       <div style={{ position: 'relative' }}>
         <button
@@ -185,23 +190,28 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
             zIndex: 10,
             padding: '8px 14px',
             borderRadius: '8px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            background: 'rgba(0,0,0,0.7)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            background: 'rgba(10, 15, 26, 0.85)',
             color: 'white',
             cursor: 'pointer',
             fontSize: '0.8125rem',
-            backdropFilter: 'blur(4px)',
-            transition: 'all 0.2s'
+            fontWeight: 600,
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}
         >
-          {isSatellite ? '🗺️ Mapa' : '🛰️ Satélite'}
+          {isSatellite ? '🗺️ Ver Callejero' : '🛰️ Satélite HD'}
         </button>
         <div ref={mapContainer} className="map-container" />
       </div>
       {error && <span style={{ color: 'var(--color-danger)', fontSize: '0.875rem' }}>{error}</span>}
       {coords && (
         <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-          Coordenadas: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+          Coordenadas seleccionadas: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
         </span>
       )}
     </div>
