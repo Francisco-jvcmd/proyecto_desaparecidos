@@ -81,3 +81,27 @@ def decode_jwt_token(token: str) -> dict:
             detail="Token inválido o expirado",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+def create_verification_token(user_id: str, email: str, expires_delta_hours: int = 24) -> str:
+    """Genera un token firmado para verificación de correo electrónico (24 horas de validez)."""
+    to_encode = {
+        "sub": user_id,
+        "email": email,
+        "type": "email_verification",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=expires_delta_hours)
+    }
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+def verify_verification_token(token: str) -> dict:
+    """Valida el token de verificación de correo electrónico."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") != "email_verification":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tipo de token inválido")
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace de verificación es inválido o ha expirado. Por favor solicita uno nuevo."
+        )
+

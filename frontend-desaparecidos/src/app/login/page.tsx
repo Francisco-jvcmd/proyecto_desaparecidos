@@ -14,10 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendStatus, setResendStatus] = useState('');
+  const [resending, setResending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setResendStatus('');
     setLoading(true);
 
     try {
@@ -36,6 +39,22 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleResend = async () => {
+    if (!email || resending) return;
+    setResending(true);
+    try {
+      const res = await familiarApi.reenviarVerificacion(email);
+      setResendStatus(res.message || 'Se ha reenviado el correo de activación.');
+    } catch (err: unknown) {
+      const apiErr = err as { detail?: string; message?: string };
+      setResendStatus(apiErr?.detail || apiErr?.message || 'Error al reenviar correo.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const isUnverified = error.toLowerCase().includes('verificad') || error.toLowerCase().includes('activaci');
 
   return (
     <div className="page-container" style={{ maxWidth: '440px', margin: '40px auto' }}>
@@ -94,7 +113,40 @@ export default function LoginPage() {
               fontSize: '0.875rem',
               marginBottom: '20px'
             }}>
-              ⚠️ {error}
+              <p style={{ margin: '0 0 8px' }}>⚠️ {error}</p>
+              {isUnverified && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-accent)',
+                    textDecoration: 'underline',
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontWeight: 600
+                  }}
+                >
+                  {resending ? 'Enviando...' : 'Reenviar enlace de activación a este correo'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {resendStatus && (
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#38bdf8',
+              fontSize: '0.875rem',
+              marginBottom: '20px'
+            }}>
+              ℹ️ {resendStatus}
             </div>
           )}
 

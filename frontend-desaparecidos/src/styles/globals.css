@@ -601,6 +601,29 @@ select.input-field {
   color: var(--text-primary);
 }
 
+/* === Mobile Navigation Toggle & Drawer === */
+.navbar-mobile-toggle {
+  display: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  line-height: 1;
+  transition: all var(--transition-fast);
+}
+
+.navbar-mobile-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-accent);
+}
+
+.navbar-mobile-drawer {
+  display: none;
+}
+
 /* === Form Layout === */
 .form-grid {
   display: grid;
@@ -860,8 +883,56 @@ select.input-field {
     width: 100%;
   }
 
-  .navbar-nav {
+  .navbar-nav.desktop-nav {
     display: none;
+  }
+
+  .navbar-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navbar-mobile-drawer {
+    display: block;
+    position: fixed;
+    top: 73px;
+    left: 0;
+    right: 0;
+    background: rgba(10, 15, 26, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border-glass);
+    padding: 20px 24px 28px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    max-height: calc(100vh - 73px);
+    overflow-y: auto;
+    animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mobile-drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+  }
+
+  .mobile-nav-link:hover {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--color-accent);
+    transform: translateX(4px);
   }
   
   .admin-panel {

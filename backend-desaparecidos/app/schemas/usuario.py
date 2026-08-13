@@ -36,6 +36,23 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     rol: str
 
+class RegistroResponse(BaseModel):
+    message: str
+    email: str
+    requiere_verificacion: bool = True
+
+class VerificarEmailRequest(BaseModel):
+    token: str
+
+class ReenviarEmailRequest(BaseModel):
+    email: EmailStr
+
+class VerificarEmailResponse(BaseModel):
+    message: str
+    access_token: str | None = None
+    token_type: str = "bearer"
+    rol: str | None = None
+
 class UsuarioResponse(BaseModel):
     id: UUID
     nombre: str
@@ -45,3 +62,4 @@ class UsuarioResponse(BaseModel):
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+

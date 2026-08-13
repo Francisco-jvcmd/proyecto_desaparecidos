@@ -62,7 +62,19 @@ export const familiarApi = {
     apiRequest('/familiar/mis-casos', { token }),
     
   registrarUsuario: (data: unknown) =>
-    apiRequest('/familiar/auth/registro', { method: 'POST', body: data }),
+    apiRequest<{ message: string; email: string; requiere_verificacion: boolean }>(
+      '/familiar/auth/registro', { method: 'POST', body: data }
+    ),
+    
+  verificarEmail: (token: string) =>
+    apiRequest<{ message: string; access_token?: string; token_type?: string; rol?: string }>(
+      '/familiar/auth/verificar-email', { method: 'POST', body: { token } }
+    ),
+
+  reenviarVerificacion: (email: string) =>
+    apiRequest<{ message: string }>(
+      '/familiar/auth/reenviar-verificacion', { method: 'POST', body: { email } }
+    ),
     
   login: (data: { email: string; password: string }) =>
     apiRequest<{ access_token: string; token_type: string; rol: string }>(

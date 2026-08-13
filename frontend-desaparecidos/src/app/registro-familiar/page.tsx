@@ -1,16 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { familiarApi } from '@/lib/api';
-import { saveAuth } from '@/lib/auth';
 import { analizarCedulaEC, validarCedulaEC } from '@/lib/validators';
 
 export default function RegistroFamiliarPage() {
-  const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -21,6 +18,12 @@ export default function RegistroFamiliarPage() {
   const [consentTratamiento, setConsentTratamiento] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Estado para la pantalla de verificación de correo
+  const [emailSent, setEmailSent] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const infoCedula = analizarCedulaEC(cedula);
 
@@ -57,9 +60,10 @@ export default function RegistroFamiliarPage() {
         cedula,
         password,
       });
-      const data = res as { access_token: string; token_type: string; rol: string };
-      saveAuth(data.access_token, data.rol);
-      router.push('/registro');
+
+      if (res && res.requiere_verificacion) {
+        setEmailSent(true);
+      }
     } catch (err: unknown) {
       const apiErr = err as { detail?: string; message?: string };
       setError(apiErr?.detail || apiErr?.message || 'Error al crear la cuenta. Verifique sus datos.');
@@ -68,6 +72,143 @@ export default function RegistroFamiliarPage() {
     }
   };
 
+  const handleResend = async () => {
+    if (resending || resendCooldown > 0) return;
+    setResending(true);
+    setResendMessage('');
+    try {
+      const res = await familiarApi.reenviarVerificacion(email);
+      setResendMessage(res.message || 'Correo reenviado con éxito.');
+      setResendCooldown(60);
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: unknown) {
+      const apiErr = err as { detail?: string; message?: string };
+      setResendMessage(apiErr?.detail || apiErr?.message || 'Error al reenviar el correo.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // === PANTALLA: Correo de Verificación Enviado ===
+  if (emailSent) {
+    return (
+      <div className="page-container" style={{ maxWidth: '520px', margin: '40px auto' }}>
+        <div style={{
+          padding: '40px 32px',
+          background: 'var(--bg-card)',
+          borderRadius: '16px',
+          border: '1px solid var(--border-glass)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: 'rgba(56, 189, 248, 0.15)',
+            border: '2px solid rgba(56, 189, 248, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '2.5rem',
+            margin: '0 auto 24px'
+          }}>
+            📧
+          </div>
+
+          <h1 style={{
+            fontSize: '1.75rem',
+            fontWeight: 700,
+            marginBottom: '12px',
+            color: 'var(--text-primary)'
+          }}>
+            ¡Revisa tu correo electrónico!
+          </h1>
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '20px' }}>
+            Hemos enviado un enlace de activación a:
+          </p>
+
+          <div style={{
+            padding: '12px 16px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-glass)',
+            fontFamily: 'monospace',
+            fontSize: '1rem',
+            fontWeight: 600,
+            color: 'var(--color-accent)',
+            marginBottom: '24px',
+            wordBreak: 'break-all'
+          }}>
+            {email}
+          </div>
+
+          <div style={{
+            padding: '16px',
+            background: 'rgba(59, 130, 246, 0.08)',
+            borderRadius: '10px',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
+            fontSize: '0.875rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.5,
+            textAlign: 'left',
+            marginBottom: '28px'
+          }}>
+            <p style={{ margin: '0 0 8px', fontWeight: 600, color: 'var(--text-primary)' }}>Pasos a seguir:</p>
+            <ol style={{ margin: 0, paddingLeft: '20px' }}>
+              <li>Abre tu bandeja de entrada (revisa también la carpeta de <em>Spam / No deseados</em>).</li>
+              <li>Haz clic en el botón <strong>"Confirmar y Activar mi Cuenta"</strong>.</li>
+              <li>Tu cuenta quedará activada y podrás ingresar de inmediato.</li>
+            </ol>
+          </div>
+
+          {resendMessage && (
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: 'rgba(59, 130, 246, 0.15)',
+              color: '#38bdf8',
+              fontSize: '0.875rem',
+              marginBottom: '20px'
+            }}>
+              {resendMessage}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Button
+              type="button"
+              variant="outline"
+              loading={resending}
+              disabled={resendCooldown > 0}
+              onClick={handleResend}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              {resendCooldown > 0 
+                ? `Reenviar correo (${resendCooldown}s)` 
+                : '🔄 Reenviar correo de activación'}
+            </Button>
+
+            <Link href="/login" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', textAlign: 'center' }}>
+              Ir a Iniciar Sesión
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // === PANTALLA: Formulario de Registro ===
   return (
     <div className="page-container" style={{ maxWidth: '520px', margin: '40px auto' }}>
       <div style={{

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from slowapi import Limiter
@@ -10,12 +10,17 @@ import datetime
 from app.api.deps import get_db, get_current_user
 from app.db.models import Usuario, Desaparecido, RolUsuario, EstadoCaso, AuditLog
 from app.schemas.desaparecido import DesaparecidoCreate, DesaparecidoResponse, DesaparecidoPublico
-from app.schemas.usuario import UsuarioCreate, UsuarioLogin, TokenResponse
+from app.schemas.usuario import (
+    UsuarioCreate, UsuarioLogin, TokenResponse,
+    RegistroResponse, VerificarEmailRequest, ReenviarEmailRequest, VerificarEmailResponse
+)
 from app.core.config import get_settings
 from app.core.security import (
     validar_cedula_ec, encrypt_aes256, decrypt_aes256,
-    hash_password, verify_password, create_jwt_token
+    hash_password, verify_password, create_jwt_token,
+    create_verification_token, verify_verification_token
 )
+from app.core.email import send_verification_email
 
 router = APIRouter(prefix="/familiar", tags=["Módulo Familiar"])
 limiter = Limiter(key_func=get_remote_address)
@@ -151,37 +156,150 @@ async def mis_casos(
     return result.scalars().all()
 
 
-@router.post("/auth/registro", response_model=TokenResponse)
+@router.post("/auth/registro", response_model=RegistroResponse)
 async def registro_usuario(
     usuario_data: UsuarioCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Crea una nueva cuenta de usuario (Familiar).
-    Valida cédula con Módulo 10, cifra PII con AES-256.
+    Crea una nueva cuenta de usuario (Familiar) y envía un correo de activación.
+    Valida cédula con Módulo 10 y cifra PII con AES-256-GCM.
     """
     if not validar_cedula_ec(usuario_data.cedula):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Cédula inválida según Módulo 10"
+            detail="Cédula inválida según el algoritmo Módulo 10 del Registro Civil"
         )
 
+    cedula_hash = hash_password(usuario_data.cedula)
+
+    # Verificar si el usuario ya existe por cédula
+    result_user = await db.execute(
+        select(Usuario).where(Usuario.cedula_hash == cedula_hash)
+    )
+    if result_user.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ya existe una cuenta registrada con este número de cédula."
+        )
+
+    # Verificar si el email ya está registrado descifrando
+    result_all = await db.execute(select(Usuario))
+    for u in result_all.scalars().all():
+        try:
+            if decrypt_aes256(u.email_cifrado, aes_key).lower() == usuario_data.email.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Ya existe una cuenta registrada con este correo electrónico."
+                )
+        except Exception:
+            continue
+
+    user_id = uuid.uuid4()
     nuevo_usuario = Usuario(
-        id=uuid.uuid4(),
+        id=user_id,
         nombre_cifrado=encrypt_aes256(usuario_data.nombre, aes_key),
         email_cifrado=encrypt_aes256(usuario_data.email, aes_key),
         telefono_cifrado=encrypt_aes256(usuario_data.telefono, aes_key),
-        cedula_hash=hash_password(usuario_data.cedula),
+        cedula_hash=cedula_hash,
         password_hash=hash_password(usuario_data.password),
         rol=RolUsuario.FAMILIAR,
-        is_active=True,
+        is_active=False,  # Requiere confirmación de correo
     )
     db.add(nuevo_usuario)
     await db.commit()
-    await db.refresh(nuevo_usuario)
 
-    token = create_jwt_token({"sub": str(nuevo_usuario.id), "rol": nuevo_usuario.rol.value})
-    return {"access_token": token, "token_type": "bearer", "rol": nuevo_usuario.rol.value}
+    # Generar token de verificación y enviar correo en segundo plano
+    token_verificacion = create_verification_token(str(user_id), usuario_data.email)
+    background_tasks.add_task(
+        send_verification_email,
+        usuario_data.email,
+        usuario_data.nombre,
+        token_verificacion
+    )
+
+    return {
+        "message": "Cuenta creada con éxito. Hemos enviado un correo con el enlace de activación.",
+        "email": usuario_data.email,
+        "requiere_verificacion": True
+    }
+
+
+@router.post("/auth/verificar-email", response_model=VerificarEmailResponse)
+async def verificar_email_post(
+    data: VerificarEmailRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verifica el correo del usuario mediante el token firmado.
+    Activa la cuenta y retorna un JWT de sesión listo para usar.
+    """
+    payload = verify_verification_token(data.token)
+    user_id = uuid.UUID(payload["sub"])
+
+    result = await db.execute(select(Usuario).where(Usuario.id == user_id))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    user.is_active = True
+    await db.commit()
+
+    auth_token = create_jwt_token({"sub": str(user.id), "rol": user.rol.value})
+    return {
+        "message": "¡Correo electrónico verificado exitosamente! Tu cuenta ha sido activada.",
+        "access_token": auth_token,
+        "token_type": "bearer",
+        "rol": user.rol.value
+    }
+
+
+@router.get("/auth/verificar-email", response_model=VerificarEmailResponse)
+async def verificar_email_get(
+    token: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Soporte GET para enlaces directos de verificación desde el correo.
+    """
+    return await verificar_email_post(VerificarEmailRequest(token=token), db)
+
+
+@router.post("/auth/reenviar-verificacion")
+async def reenviar_verificacion(
+    data: ReenviarEmailRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reenvía el correo de verificación a un usuario no activado.
+    """
+    result = await db.execute(select(Usuario))
+    target_user = None
+    target_nombre = "Usuario"
+
+    for u in result.scalars().all():
+        try:
+            decrypted_email = decrypt_aes256(u.email_cifrado, aes_key)
+            if decrypted_email.lower() == data.email.lower():
+                target_user = u
+                target_nombre = decrypt_aes256(u.nombre_cifrado, aes_key)
+                break
+        except Exception:
+            continue
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="No existe una cuenta registrada con este correo.")
+
+    if target_user.is_active:
+        return {"message": "Esta cuenta ya está verificada y activa. Puedes iniciar sesión directamente."}
+
+    token = create_verification_token(str(target_user.id), data.email)
+    background_tasks.add_task(send_verification_email, data.email, target_nombre, token)
+
+    return {"message": "Se ha reenviado un nuevo correo de activación. Por favor revisa tu bandeja de entrada."}
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -190,19 +308,16 @@ async def login(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Inicia sesión de usuario. Busca por email descifrando con AES-256.
-    NOTA: Para producción, implementar email_hash indexado para O(1) lookup.
+    Inicia sesión de usuario. Verifica credenciales y estado de activación por correo.
     """
-    # Obtener todos los usuarios y descifrar email para encontrar coincidencia
-    # TODO: Optimizar con email_hash indexado (HMAC-SHA256) para búsqueda directa
-    result = await db.execute(select(Usuario).where(Usuario.is_active == True))
+    result = await db.execute(select(Usuario))
     usuarios = result.scalars().all()
 
     user_found = None
     for u in usuarios:
         try:
             decrypted_email = decrypt_aes256(u.email_cifrado, aes_key)
-            if decrypted_email == login_data.email:
+            if decrypted_email.lower() == login_data.email.lower():
                 user_found = u
                 break
         except Exception:
@@ -210,6 +325,12 @@ async def login(
 
     if not user_found or not verify_password(login_data.password, user_found.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+    if not user_found.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta aún no ha sido verificada. Por favor revisa tu correo electrónico o solicita un nuevo enlace de activación."
+        )
 
     token = create_jwt_token({"sub": str(user_found.id), "rol": user_found.rol.value})
     return {"access_token": token, "token_type": "bearer", "rol": user_found.rol.value}
@@ -221,3 +342,4 @@ async def generar_afiche(caso_id: uuid.UUID):
     Genera el afiche PDF del caso (STUB — será implementado en Fase 3 con WeasyPrint).
     """
     return {"message": "Generación de PDF será implementada en Fase 3", "caso_id": str(caso_id)}
+
