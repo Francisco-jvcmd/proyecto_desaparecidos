@@ -33,8 +33,16 @@ export default function LoginPage() {
         router.push('/casos');
       }
     } catch (err: unknown) {
-      const apiErr = err as { detail?: string; message?: string };
-      setError(apiErr?.detail || apiErr?.message || 'Error al iniciar sesión. Verifique sus credenciales.');
+      let errorMsg = 'Error al iniciar sesión. Verifique sus credenciales.';
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      } else if (typeof err === 'string') {
+        errorMsg = err;
+      } else if (typeof err === 'object' && err !== null) {
+        const obj = err as any;
+        errorMsg = typeof obj.detail === 'string' ? obj.detail : (typeof obj.message === 'string' ? obj.message : JSON.stringify(err));
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

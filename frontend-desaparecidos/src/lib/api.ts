@@ -7,10 +7,24 @@ interface ApiOptions {
   params?: Record<string, string | number | undefined>;
 }
 
+function extractErrorMessage(errorData: any, status: number): string {
+  if (!errorData) return `Error en el servidor (HTTP ${status})`;
+  if (typeof errorData === 'string') return errorData;
+  if (typeof errorData.detail === 'string') return errorData.detail;
+  if (Array.isArray(errorData.detail)) {
+    return errorData.detail.map((d: any) => d.msg || JSON.stringify(d)).join('. ');
+  }
+  if (typeof errorData.message === 'string') return errorData.message;
+  return JSON.stringify(errorData);
+}
+
 class ApiError extends Error {
-  constructor(public status: number, message: string, public detail?: unknown) {
-    super(message);
+  public detail: string;
+  constructor(public status: number, message: string, rawError?: any) {
+    const cleanDetail = extractErrorMessage(rawError, status);
+    super(cleanDetail);
     this.name = 'ApiError';
+    this.detail = cleanDetail;
   }
 }
 
