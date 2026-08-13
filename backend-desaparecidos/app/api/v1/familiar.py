@@ -189,11 +189,14 @@ async def registro_usuario(
     result_all = await db.execute(select(Usuario))
     for u in result_all.scalars().all():
         try:
-            if decrypt_aes256(u.email_cifrado, aes_key).lower() == usuario_data.email.lower():
+            decrypted = decrypt_aes256(u.email_cifrado, aes_key)
+            if decrypted.lower() == usuario_data.email.lower():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Ya existe una cuenta registrada con este correo electrónico."
                 )
+        except HTTPException:
+            raise
         except Exception:
             continue
 
@@ -209,7 +212,14 @@ async def registro_usuario(
         is_active=False,  # Requiere confirmación de correo
     )
     db.add(nuevo_usuario)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ya existe una cuenta registrada con estos datos (cédula o correo electrónico)."
+        )
 
     # Generar token de verificación y enviar correo en segundo plano
     token_verificacion = create_verification_token(str(user_id), usuario_data.email)
