@@ -7,7 +7,7 @@ import Input from '../ui/Input';
 import MapSelector from '../maps/MapSelector';
 import { familiarApi } from '@/lib/api';
 import { getToken } from '@/lib/auth';
-import { validarCedulaEC, validarEdad, validarFechaNoFutura, validarCoordenadasDMQ } from '@/lib/validators';
+import { validarCedulaEC, analizarCedulaEC, validarEdad, validarFechaNoFutura, validarCoordenadasDMQ } from '@/lib/validators';
 
 export default function RegistroForm() {
   const [formData, setFormData] = useState({
@@ -89,7 +89,33 @@ export default function RegistroForm() {
         <div className="form-grid">
           <Input label="Nombres" name="nombres" value={formData.nombres} onChange={handleInputChange} required />
           <Input label="Apellidos" name="apellidos" value={formData.apellidos} onChange={handleInputChange} required />
-          <Input label="Cédula (10 dígitos)" name="cedula" maxLength={10} value={formData.cedula} onChange={handleInputChange} required />
+          <div>
+            <Input 
+              label="Cédula (10 dígitos)" 
+              name="cedula" 
+              maxLength={10} 
+              value={formData.cedula} 
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setFormData(prev => ({ ...prev, cedula: val }));
+              }} 
+              required 
+            />
+            {formData.cedula.length > 0 && (
+              <div style={{
+                marginTop: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                color: analizarCedulaEC(formData.cedula).valida ? '#10b981' : '#f87171',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>{analizarCedulaEC(formData.cedula).valida ? '✓' : '⚠️'}</span>
+                <span>{analizarCedulaEC(formData.cedula).mensaje}</span>
+              </div>
+            )}
+          </div>
           <Input label="Edad" name="edad" type="number" value={formData.edad} onChange={handleInputChange} required />
           <div className="input-group">
             <label>Sexo</label>

@@ -17,7 +17,6 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
   const [isSatellite, setIsSatellite] = useState(false);
 
   const STYLE_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-  const STYLE_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
   const toggleMapStyle = () => {
     if (!map.current) return;
@@ -29,18 +28,44 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
         sources: {
           'esri-satellite': {
             type: 'raster',
-            tiles: [STYLE_SATELLITE],
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
             tileSize: 256,
-            attribution: '© Esri'
+            attribution: '© Esri, Maxar, Earthstar Geographics'
+          },
+          'esri-transportation': {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256
+          },
+          'esri-labels': {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256
           }
         },
-        layers: [{
-          id: 'esri-satellite-layer',
-          type: 'raster',
-          source: 'esri-satellite',
-          minzoom: 0,
-          maxzoom: 19
-        }]
+        layers: [
+          {
+            id: 'esri-satellite-layer',
+            type: 'raster',
+            source: 'esri-satellite',
+            minzoom: 0,
+            maxzoom: 19
+          },
+          {
+            id: 'esri-transportation-layer',
+            type: 'raster',
+            source: 'esri-transportation',
+            minzoom: 0,
+            maxzoom: 19
+          },
+          {
+            id: 'esri-labels-layer',
+            type: 'raster',
+            source: 'esri-labels',
+            minzoom: 0,
+            maxzoom: 19
+          }
+        ]
       });
     } else {
       map.current.setStyle(STYLE_DARK);

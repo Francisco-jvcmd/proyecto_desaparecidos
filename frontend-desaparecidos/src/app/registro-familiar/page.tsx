@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { familiarApi } from '@/lib/api';
 import { saveAuth } from '@/lib/auth';
+import { analizarCedulaEC, validarCedulaEC } from '@/lib/validators';
 
 export default function RegistroFamiliarPage() {
   const router = useRouter();
@@ -21,11 +22,15 @@ export default function RegistroFamiliarPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const infoCedula = analizarCedulaEC(cedula);
+
   const validate = (): string | null => {
     if (nombre.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres.';
     if (!email.includes('@')) return 'Ingrese un correo electrónico válido.';
     if (!/^09\d{8}$/.test(telefono)) return 'El teléfono debe tener formato ecuatoriano (ej. 0991234567).';
-    if (cedula.length !== 10) return 'La cédula debe tener 10 dígitos.';
+    if (!validarCedulaEC(cedula)) {
+      return infoCedula.mensaje || 'Cédula no válida según el algoritmo oficial del Registro Civil (Módulo 10).';
+    }
     if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
     if (password !== confirmPassword) return 'Las contraseñas no coinciden.';
     if (!consentLOPDP) return 'Debe aceptar la Política de Privacidad para continuar.';
@@ -116,14 +121,30 @@ export default function RegistroFamiliarPage() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTelefono(e.target.value)}
               required
             />
-            <Input
-              label="Cédula de Identidad (10 dígitos)"
-              placeholder="1712345678"
-              maxLength={10}
-              value={cedula}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCedula(e.target.value)}
-              required
-            />
+            <div>
+              <Input
+                label="Cédula de Identidad (10 dígitos)"
+                placeholder="1712345678"
+                maxLength={10}
+                value={cedula}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCedula(e.target.value.replace(/\D/g, ''))}
+                required
+              />
+              {cedula.length > 0 && (
+                <div style={{
+                  marginTop: '6px',
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  color: infoCedula.valida ? '#10b981' : '#f87171',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>{infoCedula.valida ? '✓' : '⚠️'}</span>
+                  <span>{infoCedula.mensaje}</span>
+                </div>
+              )}
+            </div>
             <Input
               label="Contraseña (mínimo 8 caracteres)"
               type="password"
