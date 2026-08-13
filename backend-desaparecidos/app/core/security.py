@@ -1,5 +1,7 @@
 import os
 import base64
+import hmac
+import hashlib
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -10,6 +12,14 @@ from app.core.config import get_settings
 settings = get_settings()
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
+def hash_cedula_blind_index(cedula: str) -> str:
+    """
+    Genera un índice ciego determinístico (HMAC-SHA256) para búsquedas e índices únicos de cédula
+    sin almacenar el número en texto plano en la base de datos (cumplimiento LOPDP).
+    """
+    cleaned = cedula.strip()
+    return hmac.new(settings.SECRET_KEY.encode("utf-8"), cleaned.encode("utf-8"), hashlib.sha256).hexdigest()
 
 def validar_cedula_ec(cedula: str) -> bool:
     """Valida cédula ecuatoriana según el algoritmo Módulo 10."""

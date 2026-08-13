@@ -18,7 +18,8 @@ from app.core.config import get_settings
 from app.core.security import (
     validar_cedula_ec, encrypt_aes256, decrypt_aes256,
     hash_password, verify_password, create_jwt_token,
-    create_verification_token, verify_verification_token
+    create_verification_token, verify_verification_token,
+    hash_cedula_blind_index
 )
 from app.core.email import send_verification_email
 
@@ -54,7 +55,7 @@ async def registro_caso(
         )
 
     # Cifrado AES-256 de PII del denunciante — §2.3, §8.5
-    cedula_hash = hash_password(usuario_data.cedula)
+    cedula_hash = hash_cedula_blind_index(usuario_data.cedula)
 
     # Verificar si el usuario ya existe por hash de cédula
     result_user = await db.execute(
@@ -172,7 +173,7 @@ async def registro_usuario(
             detail="Cédula inválida según el algoritmo Módulo 10 del Registro Civil"
         )
 
-    cedula_hash = hash_password(usuario_data.cedula)
+    cedula_hash = hash_cedula_blind_index(usuario_data.cedula)
 
     # Verificar si el usuario ya existe por cédula
     result_user = await db.execute(
@@ -181,7 +182,7 @@ async def registro_usuario(
     if result_user.scalars().first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ya existe una cuenta registrada con este número de cédula."
+            detail="Ya existe una cuenta registrada con este número de cédula de identidad."
         )
 
     # Verificar si el email ya está registrado descifrando
