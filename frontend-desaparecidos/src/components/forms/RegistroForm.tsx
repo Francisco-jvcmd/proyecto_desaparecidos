@@ -144,6 +144,7 @@ export default function RegistroForm() {
         }}>
           {photoPreview ? (
             <div style={{ position: 'relative' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photoPreview}
                 alt="Vista previa"

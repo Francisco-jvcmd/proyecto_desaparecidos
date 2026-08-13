@@ -175,7 +175,7 @@ export default function RegistroFamiliarPage() {
             <p style={{ margin: '0 0 8px', fontWeight: 600, color: 'var(--text-primary)' }}>Pasos a seguir:</p>
             <ol style={{ margin: 0, paddingLeft: '20px' }}>
               <li>Abre tu bandeja de entrada (revisa también la carpeta de <em>Spam / No deseados</em>).</li>
-              <li>Haz clic en el botón <strong>"Confirmar y Activar mi Cuenta"</strong>.</li>
+              <li>Haz clic en el botón <strong>&quot;Confirmar y Activar mi Cuenta&quot;</strong>.</li>
               <li>Tu cuenta quedará activada y podrás ingresar de inmediato.</li>
             </ol>
           </div>
