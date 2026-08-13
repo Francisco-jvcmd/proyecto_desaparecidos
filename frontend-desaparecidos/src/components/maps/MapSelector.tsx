@@ -30,17 +30,20 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
             type: 'raster',
             tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
             tileSize: 256,
+            maxzoom: 18,
             attribution: '© Esri, Maxar, Earthstar Geographics'
           },
           'esri-transportation': {
             type: 'raster',
             tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256
+            tileSize: 256,
+            maxzoom: 18
           },
           'esri-labels': {
             type: 'raster',
             tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256
+            tileSize: 256,
+            maxzoom: 18
           }
         },
         layers: [
@@ -97,7 +100,8 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
       container: mapContainer.current,
       style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
       center: [-78.4678, -0.1807], // Centro de Quito
-      zoom: 11
+      zoom: 12,
+      maxZoom: 18
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
