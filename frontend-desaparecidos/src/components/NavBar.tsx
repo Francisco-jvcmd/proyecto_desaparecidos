@@ -2,35 +2,47 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { isAuthenticated, isAdmin, logout, getUser } from '@/lib/auth';
 
 export default function NavBar() {
+  const pathname = usePathname();
   const [isLogged, setIsLogged] = useState<boolean>(false);
   const [isAdminUser, setIsAdminUser] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    // Check auth state on mount
-    const checkAuth = () => {
-      const logged = isAuthenticated();
-      setIsLogged(logged);
-      if (logged) {
-        setIsAdminUser(isAdmin());
-        const user = getUser();
-        if (user && user.rol) {
-          setUserRole(user.rol);
-        }
+  const syncAuth = () => {
+    const logged = isAuthenticated();
+    setIsLogged(logged);
+    if (logged) {
+      setIsAdminUser(isAdmin());
+      const user = getUser();
+      if (user && user.rol) {
+        setUserRole(user.rol);
       }
+    } else {
+      setIsAdminUser(false);
+      setUserRole('');
+    }
+  };
+
+  useEffect(() => {
+    syncAuth();
+
+    window.addEventListener('auth-change', syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener('auth-change', syncAuth);
+      window.removeEventListener('storage', syncAuth);
     };
-    checkAuth();
-  }, []);
+  }, [pathname]);
 
   const handleLogout = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     logout();
     setMobileMenuOpen(false);
-    window.location.href = '/';
+    window.location.href = '/login';
   };
 
   const closeMenu = () => setMobileMenuOpen(false);

@@ -27,11 +27,7 @@ export default function LoginPage() {
       const res = await familiarApi.login({ email, password });
       saveAuth(res.access_token, res.rol);
       
-      if (res.rol === 'ADMIN') {
-        router.push('/admin');
-      } else {
-        router.push('/casos');
-      }
+      window.location.href = res.rol === 'ADMIN' ? '/admin' : '/casos';
     } catch (err: unknown) {
       let errorMsg = 'Error al iniciar sesión. Verifique sus credenciales.';
       if (err instanceof Error) {
