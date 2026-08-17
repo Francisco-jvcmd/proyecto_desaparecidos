@@ -50,7 +50,14 @@ app.include_router(admin.router, prefix="/api/v1", tags=["Módulo Administració
 app.include_router(prediction.router, prefix="/api/v1", tags=["Motor Predictivo"])
 app.include_router(derechos_arco.router, prefix="/api/v1", tags=["Derechos ARCO - LOPDP"])
 
+@app.get("/", tags=["Health"])
+@app.head("/", include_in_schema=False)
+async def root():
+    """Ruta raíz para health check de Render."""
+    return {"status": "ok", "version": "1.0.0", "servicio": "Plataforma Desaparecidos DMQ"}
+
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Endpoint de verificación de salud del servicio."""
     return {"status": "ok", "version": "1.0.0", "servicio": "Plataforma Desaparecidos DMQ"}
+
