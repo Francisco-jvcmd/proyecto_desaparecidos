@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     CLOUDFLARE_R2_ACCESS_KEY: str = "placeholder"
     CLOUDFLARE_R2_SECRET_KEY: str = "placeholder"
 
-    # === Email Service (Resend / SMTP) ===
+    # === Email Service (Brevo API / Resend / SMTP) ===
+    BREVO_API_KEY: str = ""
     RESEND_API_KEY: str = "placeholder"
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

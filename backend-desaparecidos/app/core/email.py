@@ -166,7 +166,61 @@ async def send_verification_email(email_destinatario: str, nombre: str, token: s
         match = re.search(r'<(.+?)>', from_field)
         return match.group(1) if match else from_field.strip()
 
-    # 1. PRIORIDAD: Intentar enviar vía SMTP (Gmail) si está configurado
+    # 1. PRIORIDAD: Intentar enviar vía Brevo REST API (HTTPS Puerto 443 - NUNCA bloqueado por Render)
+    if settings.BREVO_API_KEY and settings.BREVO_API_KEY != "placeholder":
+        try:
+            logger.info(f"📧 Intentando envío vía Brevo API a {email_destinatario}")
+            sender_email = extract_email(settings.EMAIL_FROM)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={
+                        "api-key": settings.BREVO_API_KEY,
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    json={
+                        "sender": {"name": "DMQ Desaparecidos", "email": sender_email},
+                        "to": [{"email": email_destinatario, "name": nombre}],
+                        "subject": subject,
+                        "htmlContent": html_content,
+                    },
+                )
+                if response.status_code in (200, 201):
+                    logger.info(f"✅ Correo de verificación enviado vía Brevo API a {email_destinatario}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Error Brevo API ({response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"❌ Fallo al conectar con Brevo API: {e}")
+
+    # 2. Intentar enviar vía Resend API (HTTPS Puerto 443)
+    if settings.RESEND_API_KEY and settings.RESEND_API_KEY != "placeholder":
+        try:
+            logger.info(f"📧 Intentando envío Resend API a {email_destinatario}")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": settings.EMAIL_FROM,
+                        "to": [email_destinatario],
+                        "subject": subject,
+                        "html": html_content,
+                    },
+                )
+                if response.status_code in (200, 201):
+                    logger.info(f"✅ Correo de verificación enviado vía Resend a {email_destinatario}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Error Resend API ({response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"❌ Fallo al conectar con Resend API: {e}")
+
+    # 3. Intentar enviar vía SMTP (Gmail) si está configurado
     if settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
         try:
             logger.info(f"📧 Intentando envío SMTP a {email_destinatario} vía {settings.SMTP_HOST}:{settings.SMTP_PORT}")
@@ -195,32 +249,6 @@ async def send_verification_email(email_destinatario: str, nombre: str, token: s
             logger.error(f"❌ Error SMTP al enviar correo: {e}")
         except Exception as e:
             logger.error(f"❌ Error inesperado al enviar correo vía SMTP: {type(e).__name__}: {e}")
-
-    # 2. Fallback: Intentar enviar vía Resend API
-    if settings.RESEND_API_KEY and settings.RESEND_API_KEY != "placeholder":
-        try:
-            logger.info(f"📧 Intentando envío Resend API a {email_destinatario}")
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(
-                    "https://api.resend.com/emails",
-                    headers={
-                        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "from": settings.EMAIL_FROM,
-                        "to": [email_destinatario],
-                        "subject": subject,
-                        "html": html_content,
-                    },
-                )
-                if response.status_code in (200, 201):
-                    logger.info(f"✅ Correo de verificación enviado vía Resend a {email_destinatario}")
-                    return True
-                else:
-                    logger.warning(f"⚠️ Error Resend API ({response.status_code}): {response.text}")
-        except Exception as e:
-            logger.error(f"❌ Fallo al conectar con Resend API: {e}")
 
     # 3. Fallback final: Registrar URL en logs del servidor
     logger.warning("=" * 70)
