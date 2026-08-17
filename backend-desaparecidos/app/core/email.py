@@ -152,15 +152,54 @@ def get_verification_email_html(nombre: str, verification_url: str) -> str:
 
 async def send_verification_email(email_destinatario: str, nombre: str, token: str):
     """
-    Envía el correo de verificación utilizando Resend API, SMTP o registro seguro.
+    Envía el correo de verificación utilizando SMTP (Gmail), Resend API, o registro en logs.
+    Prioriza SMTP sobre Resend para envío a cualquier destinatario.
     """
+    import re
+
     verification_url = f"{settings.FRONTEND_URL}/verificar-email?token={token}"
     html_content = get_verification_email_html(nombre, verification_url)
     subject = "Confirma tu cuenta - Plataforma DMQ Desaparecidos"
 
-    # 1. Intentar enviar vía Resend API si hay API key configurada
+    # Extraer dirección de correo pura del formato "Nombre <email@domain.com>"
+    def extract_email(from_field: str) -> str:
+        match = re.search(r'<(.+?)>', from_field)
+        return match.group(1) if match else from_field.strip()
+
+    # 1. PRIORIDAD: Intentar enviar vía SMTP (Gmail) si está configurado
+    if settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
+        try:
+            logger.info(f"📧 Intentando envío SMTP a {email_destinatario} vía {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = settings.EMAIL_FROM
+            msg["To"] = email_destinatario
+            msg.attach(MIMEText(html_content, "html"))
+
+            # Usar dirección pura como envelope sender (Gmail lo requiere)
+            sender_email = extract_email(settings.EMAIL_FROM)
+
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.sendmail(sender_email, [email_destinatario], msg.as_string())
+
+            logger.info(f"✅ Correo de verificación enviado vía SMTP a {email_destinatario}")
+            return True
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"❌ Error de autenticación SMTP (contraseña de app incorrecta): {e}")
+        except smtplib.SMTPException as e:
+            logger.error(f"❌ Error SMTP al enviar correo: {e}")
+        except Exception as e:
+            logger.error(f"❌ Error inesperado al enviar correo vía SMTP: {type(e).__name__}: {e}")
+
+    # 2. Fallback: Intentar enviar vía Resend API
     if settings.RESEND_API_KEY and settings.RESEND_API_KEY != "placeholder":
         try:
+            logger.info(f"📧 Intentando envío Resend API a {email_destinatario}")
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
                     "https://api.resend.com/emails",
@@ -176,35 +215,19 @@ async def send_verification_email(email_destinatario: str, nombre: str, token: s
                     },
                 )
                 if response.status_code in (200, 201):
-                    logger.info(f"Correo de verificación enviado vía Resend a {email_destinatario}")
+                    logger.info(f"✅ Correo de verificación enviado vía Resend a {email_destinatario}")
                     return True
                 else:
-                    logger.warning(f"Error Resend API ({response.status_code}): {response.text}")
+                    logger.warning(f"⚠️ Error Resend API ({response.status_code}): {response.text}")
         except Exception as e:
-            logger.error(f"Fallo al conectar con Resend API: {e}")
+            logger.error(f"❌ Fallo al conectar con Resend API: {e}")
 
-    # 2. Intentar enviar vía SMTP si hay servidor configurado
-    if settings.SMTP_HOST and settings.SMTP_USER:
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = settings.EMAIL_FROM
-            msg["To"] = email_destinatario
-            msg.attach(MIMEText(html_content, "html"))
+    # 3. Fallback final: Registrar URL en logs del servidor
+    logger.warning("=" * 70)
+    logger.warning(f"⚠️ NO SE PUDO ENVIAR CORREO a {email_destinatario}")
+    logger.warning(f"📧 [SIMULADOR] Verificación para: {email_destinatario}")
+    logger.warning(f"🔗 Enlace de Activación: {verification_url}")
+    logger.warning(f"💡 Configure SMTP_HOST, SMTP_USER, SMTP_PASSWORD en las variables de entorno")
+    logger.warning("=" * 70)
+    return False
 
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
-                server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                server.sendmail(settings.EMAIL_FROM, [email_destinatario], msg.as_string())
-            
-            logger.info(f"Correo de verificación enviado vía SMTP a {email_destinatario}")
-            return True
-        except Exception as e:
-            logger.error(f"Fallo al enviar correo vía SMTP: {e}")
-
-    # 3. Fallback en desarrollo: Registrar URL en logs del servidor
-    logger.info("=" * 70)
-    logger.info(f"📧 [SIMULADOR DE EMAIL] Verificación para: {email_destinatario}")
-    logger.info(f"🔗 Enlace de Activación: {verification_url}")
-    logger.info("=" * 70)
-    return True

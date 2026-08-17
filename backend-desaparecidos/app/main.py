@@ -61,3 +61,29 @@ async def health_check():
     """Endpoint de verificación de salud del servicio."""
     return {"status": "ok", "version": "1.0.0", "servicio": "Plataforma Desaparecidos DMQ"}
 
+@app.get("/debug/email-config", tags=["Debug"])
+async def debug_email_config():
+    """Diagnóstico temporal: muestra la configuración de email (sin credenciales)."""
+    return {
+        "smtp_host": settings.SMTP_HOST or "(vacío)",
+        "smtp_port": settings.SMTP_PORT,
+        "smtp_user": settings.SMTP_USER[:4] + "***" if settings.SMTP_USER else "(vacío)",
+        "smtp_password_set": bool(settings.SMTP_PASSWORD and settings.SMTP_PASSWORD.strip()),
+        "smtp_password_length": len(settings.SMTP_PASSWORD) if settings.SMTP_PASSWORD else 0,
+        "email_from": settings.EMAIL_FROM,
+        "resend_api_key_set": bool(settings.RESEND_API_KEY and settings.RESEND_API_KEY != "placeholder"),
+        "frontend_url": settings.FRONTEND_URL,
+    }
+
+@app.get("/debug/test-email", tags=["Debug"])
+async def debug_test_email(to: str = "diego23cumbajin@gmail.com"):
+    """Diagnóstico temporal: envía un correo de prueba y devuelve el resultado."""
+    from app.core.email import send_verification_email
+    from app.core.security import create_verification_token
+    import traceback
+    try:
+        token = create_verification_token("test-debug-id", to)
+        result = await send_verification_email(to, "Prueba Diagnóstico", token)
+        return {"success": result, "sent_to": to, "method": "SMTP/Resend"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
