@@ -77,13 +77,53 @@ async def debug_email_config():
 
 @app.get("/debug/test-email", tags=["Debug"])
 async def debug_test_email(to: str = "diego23cumbajin@gmail.com"):
-    """Diagnóstico temporal: envía un correo de prueba y devuelve el resultado."""
-    from app.core.email import send_verification_email
-    from app.core.security import create_verification_token
-    import traceback
+    """Diagnóstico detallado: prueba SMTP paso a paso y devuelve el error exacto."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import re
+
+    steps = []
     try:
-        token = create_verification_token("test-debug-id", to)
-        result = await send_verification_email(to, "Prueba Diagnóstico", token)
-        return {"success": result, "sent_to": to, "method": "SMTP/Resend"}
+        steps.append(f"1. Host: {settings.SMTP_HOST}, Port: {settings.SMTP_PORT}, User: {settings.SMTP_USER}")
+        
+        # Test DNS / Connection
+        steps.append("2. Conectando al servidor SMTP...")
+        server = smtplib.SMTP(settings.SMTP_HOST, int(settings.SMTP_PORT), timeout=15)
+        server.set_debuglevel(1)
+        steps.append("3. Conexión establecida. Enviando EHLO...")
+        server.ehlo()
+        
+        steps.append("4. Iniciando STARTTLS...")
+        server.starttls()
+        server.ehlo()
+        
+        steps.append(f"5. Autenticando con usuario: {settings.SMTP_USER} y clave de longitud {len(settings.SMTP_PASSWORD)}...")
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        steps.append("6. ¡Autenticación SMTP exitosa!")
+        
+        # Match email address
+        match = re.search(r'<(.+?)>', settings.EMAIL_FROM)
+        sender_email = match.group(1) if match else settings.EMAIL_FROM.strip()
+        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Prueba de Verificación DMQ Desaparecidos"
+        msg["From"] = settings.EMAIL_FROM
+        msg["To"] = to
+        msg.attach(MIMEText("<h1>Prueba Exitosa</h1><p>El sistema de correo funciona correctamente.</p>", "html"))
+        
+        steps.append(f"7. Enviando correo a {to} desde {sender_email}...")
+        server.sendmail(sender_email, [to], msg.as_string())
+        server.quit()
+        steps.append(f"8. ¡Correo entregado con éxito a {to}!")
+        
+        return {
+            "success": True,
+            "steps": steps
+        }
+    except smtplib.SMTPAuthenticationError as e:
+        steps.append(f"ERROR_AUTH: Fallo de autenticación en Gmail: {e.smtp_code} - {e.smtp_error.decode('utf-8', errors='ignore') if isinstance(e.smtp_error, bytes) else str(e.smtp_error)}")
+        return {"success": False, "error_type": "SMTPAuthenticationError", "steps": steps}
     except Exception as e:
-        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+        steps.append(f"ERROR: {type(e).__name__}: {str(e)}")
+        return {"success": False, "error_type": type(e).__name__, "error": str(e), "steps": steps}
