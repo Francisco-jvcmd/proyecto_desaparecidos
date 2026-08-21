@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api-desaparecidos.onrender.com/api/v1';
 
 interface ApiOptions {
   method?: string;

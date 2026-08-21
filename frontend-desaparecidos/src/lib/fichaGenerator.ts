@@ -41,48 +41,49 @@ export async function generarFichaBusqueda(caso: CasoFichaData): Promise<string>
   const fecha = caso.fecha_desaparicion || 'NO ESPECIFICADA';
   const vestimenta = caso.ropa_descripcion || 'No detallada al momento del reporte.';
   const senas = caso.senas_particulares || 'Sin señas particulares reportadas.';
+  const codigoCaso = `DMQ-${caso.id.slice(0, 8).toUpperCase()}`;
   const caseUrl = `https://proyecto-desaparecidos.vercel.app/casos/${caso.id}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(caseUrl)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(caseUrl)}`;
 
   // 1. Fondo principal oscuro institucional con degradado elegante
   const bgGrad = ctx.createLinearGradient(0, 0, 0, 1200);
-  bgGrad.addColorStop(0, '#0a0e17');
-  bgGrad.addColorStop(1, '#0f172a');
+  bgGrad.addColorStop(0, '#070b14');
+  bgGrad.addColorStop(1, '#0c1322');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, 1200, 1200);
 
-  // Marco exterior
+  // Marco exterior grueso
   ctx.strokeStyle = '#dc2626';
-  ctx.lineWidth = 12;
-  ctx.strokeRect(6, 6, 1188, 1188);
+  ctx.lineWidth = 14;
+  ctx.strokeRect(7, 7, 1186, 1186);
 
   // 2. Franja superior de Alerta Oficial (Rojo / Amarillo)
   const headerGrad = ctx.createLinearGradient(0, 0, 1200, 0);
-  headerGrad.addColorStop(0, '#b91c1c');
+  headerGrad.addColorStop(0, '#991b1b');
   headerGrad.addColorStop(0.5, '#dc2626');
-  headerGrad.addColorStop(1, '#b91c1c');
+  headerGrad.addColorStop(1, '#991b1b');
   ctx.fillStyle = headerGrad;
-  ctx.fillRect(12, 12, 1176, 150);
+  ctx.fillRect(14, 14, 1172, 145);
 
   // Texto de la franja superior
   ctx.fillStyle = '#fef08a';
-  ctx.font = '900 42px sans-serif';
+  ctx.font = '900 40px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('🚨 ALERTA OFICIAL DE BÚSQUEDA 🚨', 600, 68);
+  ctx.fillText('🚨 ALERTA OFICIAL DE BÚSQUEDA 🚨', 600, 64);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = '700 24px sans-serif';
-  ctx.fillText('DISTRITO METROPOLITANO DE QUITO • PLATAFORMA CIUDADANA', 600, 112);
+  ctx.font = '800 22px sans-serif';
+  ctx.fillText('DISTRITO METROPOLITANO DE QUITO • PLATAFORMA CIUDADANA', 600, 104);
 
   ctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
-  ctx.font = '600 16px sans-serif';
-  ctx.fillText('LEY ORGÁNICA DE PROTECCIÓN DE DATOS PERSONALES (LOPDP - ART. 8)', 600, 142);
+  ctx.font = '600 15px sans-serif';
+  ctx.fillText('LEY ORGÁNICA DE PROTECCIÓN DE DATOS PERSONALES (LOPDP - ART. 8)', 600, 136);
 
   // 3. Columna Izquierda: Fotografía de la persona
-  const photoX = 50;
-  const photoY = 190;
-  const photoW = 420;
-  const photoH = 520;
+  const photoX = 45;
+  const photoY = 175;
+  const photoW = 450;
+  const photoH = 540;
 
   // Fondo y marco de foto
   ctx.fillStyle = '#1e293b';
@@ -104,7 +105,7 @@ export async function generarFichaBusqueda(caso: CasoFichaData): Promise<string>
 
   if (!fotoCargada) {
     ctx.fillStyle = '#64748b';
-    ctx.font = '100px sans-serif';
+    ctx.font = '110px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('👤', photoX + photoW / 2, photoY + photoH / 2 + 30);
     ctx.font = '700 20px sans-serif';
@@ -114,15 +115,37 @@ export async function generarFichaBusqueda(caso: CasoFichaData): Promise<string>
 
   // Cinta de estado sobre la foto
   ctx.fillStyle = '#dc2626';
-  ctx.fillRect(photoX, photoY + photoH - 50, photoW, 50);
+  ctx.fillRect(photoX, photoY + photoH - 52, photoW, 52);
   ctx.fillStyle = '#ffffff';
-  ctx.font = '900 24px sans-serif';
+  ctx.font = '900 26px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('DESAPARECIDO/A', photoX + photoW / 2, photoY + photoH - 16);
 
+  // Bloque inferior de la foto: Código oficial del caso
+  const codeBoxY = photoY + photoH + 15;
+  const codeBoxH = 145;
+  ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+  ctx.fillRect(photoX, codeBoxY, photoW, codeBoxH);
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(photoX, codeBoxY, photoW, codeBoxH);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '700 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CÓDIGO ÚNICO DE EXPEDIENTE:', photoX + photoW / 2, codeBoxY + 32);
+
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = '900 30px monospace';
+  ctx.fillText(codigoCaso, photoX + photoW / 2, codeBoxY + 74);
+
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = '800 15px sans-serif';
+  ctx.fillText('⚡ BÚSQUEDA ACTIVA EN TODO EL DMQ', photoX + photoW / 2, codeBoxY + 116);
+
   // 4. Columna Derecha: Ficha de Datos
-  const dataX = 510;
-  let currentY = 220;
+  const dataX = 525;
+  let currentY = 210;
 
   ctx.textAlign = 'left';
 
@@ -130,41 +153,45 @@ export async function generarFichaBusqueda(caso: CasoFichaData): Promise<string>
   ctx.fillStyle = '#38bdf8';
   ctx.font = '900 36px sans-serif';
   ctx.fillText(nombreCompleto, dataX, currentY);
-  currentY += 45;
+  currentY += 40;
 
   // Línea divisoria
   ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(dataX, currentY);
-  ctx.lineTo(1150, currentY);
+  ctx.lineTo(1155, currentY);
   ctx.stroke();
-  currentY += 35;
+  currentY += 34;
 
+  // Filas de datos (Medición dinámica para evitar cualquier solapamiento)
   const drawDataRow = (label: string, value: string, icon = '•') => {
     ctx.fillStyle = '#94a3b8';
     ctx.font = '700 20px sans-serif';
-    ctx.fillText(`${icon} ${label}:`, dataX, currentY);
+    const labelText = `${icon} ${label}:`;
+    ctx.fillText(labelText, dataX, currentY);
 
     ctx.fillStyle = '#f8fafc';
-    ctx.font = '600 22px sans-serif';
-    ctx.fillText(value, dataX + 220, currentY);
+    ctx.font = '700 22px sans-serif';
+    // Offset seguro de 280px para que jamás se sobreponga
+    ctx.fillText(value, dataX + 280, currentY);
     currentY += 42;
   };
 
   drawDataRow('EDAD', `${caso.edad} AÑOS`, '👤');
   drawDataRow('SEXO', `${caso.sexo.toUpperCase()}`, '⚧');
-  drawDataRow('FECHA DESAPARICIÓN', `${fecha}`, '🗓️');
+  drawDataRow('DESAPARICIÓN', `${fecha}`, '🗓️');
   drawDataRow('SECTOR / LUGAR', `${sector}`, '📍');
 
-  currentY += 10;
+  currentY += 8;
+
   // Cuadros descriptivos (Vestimenta y Señas)
-  const drawTextBox = (title: string, text: string) => {
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.7)';
-    ctx.fillRect(dataX, currentY, 640, 110);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  const drawTextBox = (title: string, text: string, boxH: number) => {
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.75)';
+    ctx.fillRect(dataX, currentY, 630, boxH);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(dataX, currentY, 640, 110);
+    ctx.strokeRect(dataX, currentY, 630, boxH);
 
     ctx.fillStyle = '#f59e0b';
     ctx.font = '800 18px sans-serif';
@@ -175,66 +202,90 @@ export async function generarFichaBusqueda(caso: CasoFichaData): Promise<string>
     // Multi-line wrap
     const words = text.split(' ');
     let line = '';
-    let lineY = currentY + 60;
+    let lineY = currentY + 62;
     for (let n = 0; n < words.length; n++) {
       const testLine = line + words[n] + ' ';
       const metrics = ctx.measureText(testLine);
-      if (metrics.width > 600 && n > 0) {
+      if (metrics.width > 590 && n > 0) {
         ctx.fillText(line, dataX + 16, lineY);
         line = words[n] + ' ';
-        lineY += 24;
-        if (lineY > currentY + 95) break; // evitar desbordar
+        lineY += 25;
+        if (lineY > currentY + boxH - 15) break;
       } else {
         line = testLine;
       }
     }
     ctx.fillText(line, dataX + 16, lineY);
-    currentY += 125;
+    currentY += boxH + 14;
   };
 
-  drawTextBox('👕 VESTIMENTA AL MOMENTO DE LA DESAPARICIÓN:', vestimenta);
-  drawTextBox('🔍 SEÑAS PARTICULARES (CICATRICES / TATUAJES):', senas);
+  drawTextBox('👕 VESTIMENTA AL MOMENTO DE LA DESAPARICIÓN:', vestimenta, 130);
+  drawTextBox('🔍 SEÑAS PARTICULARES (CICATRICES / TATUAJES):', senas, 130);
+
+  // Banner de Zona de Búsqueda
+  ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+  ctx.fillRect(dataX, currentY, 630, 85);
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dataX, currentY, 630, 85);
+
+  ctx.fillStyle = '#fef08a';
+  ctx.font = '800 18px sans-serif';
+  ctx.fillText(`📍 ZONA PRIORITARIA DE RASTREO: ${sector}`, dataX + 16, currentY + 32);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '500 15px sans-serif';
+  ctx.fillText('Si viste a esta persona en este sector, ingresa tu pista confidencial.', dataX + 16, currentY + 62);
 
   // 5. Franja Inferior: Canales de Emergencia y Código QR
-  const footerY = 960;
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(20, footerY, 1160, 215);
+  const footerY = 905;
+  const footerH = 275;
+  ctx.fillStyle = '#080c16';
+  ctx.fillRect(18, footerY, 1164, footerH);
   ctx.strokeStyle = '#f59e0b';
   ctx.lineWidth = 4;
-  ctx.strokeRect(20, footerY, 1160, 215);
+  ctx.strokeRect(18, footerY, 1164, footerH);
 
   // Cargar y dibujar QR
+  const qrBoxX = 35;
+  const qrBoxY = footerY + 18;
+  const qrBoxSize = 238;
+
   try {
     const qrImg = await loadImage(qrUrl);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(40, footerY + 15, 185, 185);
-    ctx.drawImage(qrImg, 45, footerY + 20, 175, 175);
+    ctx.fillRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+    ctx.drawImage(qrImg, qrBoxX + 6, qrBoxY + 6, qrBoxSize - 12, qrBoxSize - 12);
   } catch {
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(40, footerY + 15, 185, 185);
+    ctx.fillRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
     ctx.fillStyle = '#000000';
-    ctx.font = '700 16px sans-serif';
+    ctx.font = '700 20px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('PORTAL DMQ', 132, footerY + 110);
+    ctx.fillText('ESCANEAR QR', qrBoxX + qrBoxSize / 2, qrBoxY + qrBoxSize / 2);
   }
 
   // Texto de números de emergencia
   ctx.textAlign = 'left';
   ctx.fillStyle = '#fef08a';
   ctx.font = '900 28px sans-serif';
-  ctx.fillText('📞 SI TIENES INFORMACIÓN O LO/LA HAS VISTO:', 250, footerY + 55);
+  ctx.fillText('📞 SI TIENES INFORMACIÓN O LO/LA HAS VISTO:', 305, footerY + 52);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = '800 32px sans-serif';
-  ctx.fillText('🚨 ECU 911   |   🚔 1800-DELITO (335486)', 250, footerY + 105);
+  ctx.font = '900 36px sans-serif';
+  ctx.fillText('🚨 ECU 911   |   🚔 1800-DELITO (335486)', 305, footerY + 105);
 
   ctx.fillStyle = '#38bdf8';
   ctx.font = '700 22px sans-serif';
-  ctx.fillText(`🌐 Aporta pistas en: proyecto-desaparecidos.vercel.app`, 250, footerY + 145);
+  ctx.fillText(`🌐 Portal Oficial: proyecto-desaparecidos.vercel.app`, 305, footerY + 152);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '500 15px sans-serif';
-  ctx.fillText('Escanea el código QR con la cámara de tu celular para abrir el caso y enviar reportes confidenciales.', 250, footerY + 180);
+  ctx.font = '500 16px sans-serif';
+  ctx.fillText('📲 Escanea el código QR con tu celular para abrir este caso directamente y aportar pistas.', 305, footerY + 192);
+
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
+  ctx.font = '500 13px sans-serif';
+  ctx.fillText('Ficha oficial generada bajo la Ley Orgánica de Protección de Datos Personales (LOPDP) para fines exclusivos de búsqueda.', 305, footerY + 235);
 
   return canvas.toDataURL('image/png');
 }

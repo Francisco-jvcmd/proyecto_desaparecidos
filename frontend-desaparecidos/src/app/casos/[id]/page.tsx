@@ -29,33 +29,51 @@ export default function CasoDetail({ params }: Props) {
   const [pistaLoading, setPistaLoading] = useState(false);
   const [pistaError, setPistaError] = useState('');
   const [pistaSuccess, setPistaSuccess] = useState('');
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchCasoAndPistas = async () => {
-      try {
-        const [casoData, pistasData] = await Promise.allSettled([
-          familiarApi.obtenerCaso(params.id),
-          comunidadApi.pistasDelCaso(params.id)
-        ]);
+      setLoading(true);
+      setError('');
 
-        if (casoData.status === 'fulfilled' && casoData.value) {
-          setCaso(casoData.value);
-        } else {
-          throw new Error('El caso no fue encontrado o aún no ha sido aprobado públicamente.');
-        }
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const [casoData, pistasData] = await Promise.allSettled([
+            familiarApi.obtenerCaso(params.id),
+            comunidadApi.pistasDelCaso(params.id)
+          ]);
 
-        if (pistasData.status === 'fulfilled' && Array.isArray(pistasData.value)) {
-          setPistas(pistasData.value);
+          if (!isMounted) return;
+
+          if (casoData.status === 'fulfilled' && casoData.value) {
+            setCaso(casoData.value);
+            if (pistasData.status === 'fulfilled' && Array.isArray(pistasData.value)) {
+              setPistas(pistasData.value);
+            }
+            setLoading(false);
+            return;
+          }
+
+          if (attempt === 1) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+
+          throw new Error('El caso no fue encontrado o se encuentra en proceso de validación.');
+        } catch (err: any) {
+          if (attempt === 2 && isMounted) {
+            console.error('Error al cargar caso:', err);
+            setError(err.message || 'El servidor en la nube se está iniciando. Por favor pulsa Reintentar.');
+          }
         }
-      } catch (err: any) {
-        console.error('Error al cargar caso:', err);
-        setError(err.message || 'El caso no fue encontrado o se encuentra en revisión.');
-      } finally {
-        setLoading(false);
       }
+      if (isMounted) setLoading(false);
     };
+
     fetchCasoAndPistas();
-  }, [params.id]);
+    return () => { isMounted = false; };
+  }, [params.id, retryTrigger]);
 
   const handleDescargarFicha = async () => {
     if (!caso) return;
@@ -118,8 +136,9 @@ export default function CasoDetail({ params }: Props) {
 
   if (loading) {
     return (
-      <div className="page-container loading-container">
-        <div className="spinner" />
+      <div className="page-container loading-container" style={{ textAlign: 'center', padding: '80px 20px' }}>
+        <div className="spinner" style={{ margin: '0 auto 16px' }} />
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>Cargando expediente oficial del caso...</p>
       </div>
     );
   }
@@ -133,9 +152,14 @@ export default function CasoDetail({ params }: Props) {
           <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
             {error || 'El caso solicitado no existe o se encuentra en proceso de revisión administrativa.'}
           </p>
-          <Link href="/casos" className="btn btn-primary" style={{ justifyContent: 'center' }}>
-            ← Volver a Casos Activos
-          </Link>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <Button variant="primary" onClick={() => setRetryTrigger(prev => prev + 1)}>
+              🔄 Reintentar Conexión
+            </Button>
+            <Link href="/casos" className="btn btn-outline">
+              ← Volver a Casos
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -181,7 +205,21 @@ export default function CasoDetail({ params }: Props) {
               <h1 style={{ background: 'linear-gradient(135deg, var(--text-primary), var(--color-accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 {nombreCompleto}
               </h1>
-              <Badge estado={caso.estado || 'APROBADO'} />
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', margin: '8px 0 16px' }}>
+                <Badge estado={caso.estado || 'APROBADO'} />
+                <span style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  color: '#38bdf8',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  fontFamily: 'monospace'
+                }}>
+                  EXP: DMQ-{caso.id.slice(0, 8).toUpperCase()}
+                </span>
+              </div>
               
               <div className="detail-meta">
                 <div className="detail-meta-item">
