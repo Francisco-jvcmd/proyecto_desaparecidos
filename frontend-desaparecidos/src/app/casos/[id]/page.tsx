@@ -245,7 +245,7 @@ export default function CasoDetail({ params }: Props) {
             </h3>
             {pistas.length === 0 ? (
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                Aún no hay pistas verificadas para este caso. Si tienes información sobre su paradero, haz clic en <strong>"Aportar Pista"</strong>.
+                Aún no hay pistas verificadas para este caso. Si tienes información sobre su paradero, haz clic en <strong>Aportar Pista</strong>.
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
