@@ -43,8 +43,8 @@ export default function RegistroForm() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La imagen no debe superar los 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('La imagen no debe superar los 10MB.');
       return;
     }
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -52,8 +52,37 @@ export default function RegistroForm() {
       return;
     }
     setPhotoFile(file);
+
+    // Compresión ligera en cliente para rendimiento óptimo
     const reader = new FileReader();
-    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+        setPhotoPreview(compressedBase64);
+      };
+      img.src = event.target?.result as string;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -109,7 +138,13 @@ export default function RegistroForm() {
     } catch (err: unknown) {
       let errorMsg = 'Error al registrar el caso. Verifique la información ingresada.';
       if (err instanceof Error) {
-        errorMsg = err.message;
+        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+          errorMsg = 'El servidor se estaba iniciando en la nube (arranque en frío). Por favor vuelve a hacer clic en "Registrar Caso".';
+        } else if (err.message.includes('401') || err.message.toLowerCase().includes('token') || err.message.toLowerCase().includes('expirado')) {
+          errorMsg = 'Tu sesión ha expirado por seguridad. Por favor cierra sesión e ingresa nuevamente.';
+        } else {
+          errorMsg = err.message;
+        }
       } else if (typeof err === 'object' && err !== null) {
         const obj = err as any;
         errorMsg = typeof obj.detail === 'string' ? obj.detail : (typeof obj.message === 'string' ? obj.message : JSON.stringify(err));
