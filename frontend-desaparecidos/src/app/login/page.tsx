@@ -107,6 +107,17 @@ export default function LoginPage() {
             />
           </div>
 
+          <div style={{ textAlign: 'right', marginTop: '-8px', marginBottom: '8px' }}>
+            <Link href="/recuperar-contrasena" style={{
+              color: 'var(--color-accent)',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              textDecoration: 'none'
+            }}>
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+
           {error && (
             <div style={{
               padding: '12px 16px',

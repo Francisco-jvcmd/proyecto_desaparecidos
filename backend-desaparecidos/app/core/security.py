@@ -115,3 +115,26 @@ def verify_verification_token(token: str) -> dict:
             detail="El enlace de verificación es inválido o ha expirado. Por favor solicita uno nuevo."
         )
 
+def create_password_reset_token(user_id: str, email: str) -> str:
+    """Genera un token firmado para restablecimiento de contraseña (15 minutos de validez)."""
+    to_encode = {
+        "sub": user_id,
+        "email": email,
+        "type": "password_reset",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
+    }
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+def verify_password_reset_token(token: str) -> dict:
+    """Valida el token de restablecimiento de contraseña."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") != "password_reset":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tipo de token inválido")
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace de recuperación es inválido o ha expirado. Por favor solicita uno nuevo."
+        )
+

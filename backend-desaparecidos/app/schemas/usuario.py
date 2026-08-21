@@ -63,3 +63,10 @@ class UsuarioResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+class SolicitarResetPasswordRequest(BaseModel):
+    email: EmailStr
+
+class RestablecerPasswordRequest(BaseModel):
+    token: str
+    nueva_password: str = Field(min_length=8)
+

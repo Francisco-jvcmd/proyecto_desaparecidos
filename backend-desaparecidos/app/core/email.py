@@ -259,3 +259,240 @@ async def send_verification_email(email_destinatario: str, nombre: str, token: s
     logger.warning("=" * 70)
     return False
 
+def get_password_reset_email_html(nombre: str, reset_url: str) -> str:
+    """
+    Genera una plantilla HTML para el restablecimiento de contraseña.
+    """
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restablecimiento de Contraseña</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #050811;
+      margin: 0;
+      padding: 0;
+      color: #f1f5f9;
+    }}
+    .container {{
+      max-width: 580px;
+      margin: 30px auto;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }}
+    .header {{
+      background: linear-gradient(135deg, #1e3a8a, #0f172a);
+      padding: 32px 24px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }}
+    .brand {{
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }}
+    .content {{
+      padding: 36px 32px;
+      line-height: 1.6;
+    }}
+    .greeting {{
+      font-size: 18px;
+      font-weight: 600;
+      color: #38bdf8;
+      margin-bottom: 16px;
+    }}
+    .text {{
+      color: #cbd5e1;
+      font-size: 15px;
+      margin-bottom: 24px;
+    }}
+    .btn-container {{
+      text-align: center;
+      margin: 32px 0;
+    }}
+    .btn {{
+      display: inline-block;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #0f172a !important;
+      font-weight: 700;
+      font-size: 16px;
+      text-decoration: none;
+      padding: 14px 36px;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+    }}
+    .link-alt {{
+      background: rgba(255, 255, 255, 0.03);
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      word-break: break-all;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 20px;
+    }}
+    .link-alt a {{
+      color: #38bdf8;
+      text-decoration: underline;
+    }}
+    .security-note {{
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      color: #64748b;
+    }}
+    .footer {{
+      background: #090d16;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">🔍 DMQ Desaparecidos</div>
+      <p style="margin: 6px 0 0; color: #94a3b8; font-size: 13px;">Plataforma de Búsqueda y Asistencia Comunitaria</p>
+    </div>
+    <div class="content">
+      <div class="greeting">¡Hola, {nombre}!</div>
+      <p class="text">
+        Recibimos una solicitud para restablecer la contraseña de tu cuenta en DMQ Desaparecidos.
+      </p>
+      
+      <div class="btn-container">
+        <a href="{reset_url}" class="btn" target="_blank">🔑 Restablecer mi Contraseña</a>
+      </div>
+
+      <p class="text" style="font-size: 13px; color: #94a3b8;">
+        Este enlace es válido por <strong>15 minutos</strong>.
+      </p>
+
+      <div class="link-alt">
+        ¿El botón no funciona? Copia y pega este enlace en tu navegador:<br>
+        <a href="{reset_url}">{reset_url}</a>
+      </div>
+
+      <div class="security-note">
+        🛡️ <strong>Aviso de Seguridad:</strong><br>
+        Si no solicitaste este cambio, puedes ignorar este correo. Tu contraseña actual seguirá siendo la misma.
+      </div>
+    </div>
+    <div class="footer">
+      Distrito Metropolitano de Quito — Ecuador<br>
+      © 2026 Plataforma de Asistencia Tecnológica para Personas Desaparecidas
+    </div>
+  </div>
+</body>
+</html>"""
+
+async def send_password_reset_email(email_destinatario: str, nombre: str, token: str):
+    import re
+
+    reset_url = f"{settings.FRONTEND_URL}/restablecer-contrasena?token={token}"
+    html_content = get_password_reset_email_html(nombre, reset_url)
+    subject = "Restablecer Contraseña - DMQ Desaparecidos"
+
+    def extract_email(from_field: str) -> str:
+        match = re.search(r'<(.+?)>', from_field)
+        return match.group(1) if match else from_field.strip()
+
+    if settings.BREVO_API_KEY and settings.BREVO_API_KEY != "placeholder":
+        try:
+            logger.info(f"📧 Intentando envío vía Brevo API a {email_destinatario}")
+            sender_email = extract_email(settings.EMAIL_FROM)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={
+                        "api-key": settings.BREVO_API_KEY,
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    json={
+                        "sender": {"name": "DMQ Desaparecidos", "email": sender_email},
+                        "to": [{"email": email_destinatario, "name": nombre}],
+                        "subject": subject,
+                        "htmlContent": html_content,
+                    },
+                )
+                if response.status_code in (200, 201):
+                    logger.info(f"✅ Correo de restablecimiento enviado vía Brevo API a {email_destinatario}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Error Brevo API ({response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"❌ Fallo al conectar con Brevo API: {e}")
+
+    if settings.RESEND_API_KEY and settings.RESEND_API_KEY != "placeholder":
+        try:
+            logger.info(f"📧 Intentando envío Resend API a {email_destinatario}")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": settings.EMAIL_FROM,
+                        "to": [email_destinatario],
+                        "subject": subject,
+                        "html": html_content,
+                    },
+                )
+                if response.status_code in (200, 201):
+                    logger.info(f"✅ Correo de restablecimiento enviado vía Resend a {email_destinatario}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Error Resend API ({response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"❌ Fallo al conectar con Resend API: {e}")
+
+    if settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
+        try:
+            logger.info(f"📧 Intentando envío SMTP a {email_destinatario} vía {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = settings.EMAIL_FROM
+            msg["To"] = email_destinatario
+            msg.attach(MIMEText(html_content, "html"))
+
+            sender_email = extract_email(settings.EMAIL_FROM)
+
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.sendmail(sender_email, [email_destinatario], msg.as_string())
+
+            logger.info(f"✅ Correo de restablecimiento enviado vía SMTP a {email_destinatario}")
+            return True
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"❌ Error de autenticación SMTP (contraseña de app incorrecta): {e}")
+        except smtplib.SMTPException as e:
+            logger.error(f"❌ Error SMTP al enviar correo: {e}")
+        except Exception as e:
+            logger.error(f"❌ Error inesperado al enviar correo vía SMTP: {type(e).__name__}: {e}")
+
+    logger.warning("=" * 70)
+    logger.warning(f"⚠️ NO SE PUDO ENVIAR CORREO a {email_destinatario}")
+    logger.warning(f"📧 [SIMULADOR] Restablecimiento para: {email_destinatario}")
+    logger.warning(f"🔗 Enlace de Restablecimiento: {reset_url}")
+    logger.warning(f"💡 Configure SMTP_HOST, SMTP_USER, SMTP_PASSWORD en las variables de entorno")
+    logger.warning("=" * 70)
+    return False
+

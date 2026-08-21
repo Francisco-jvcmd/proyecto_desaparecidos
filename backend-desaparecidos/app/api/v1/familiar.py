@@ -12,16 +12,18 @@ from app.db.models import Usuario, Desaparecido, RolUsuario, EstadoCaso, AuditLo
 from app.schemas.desaparecido import DesaparecidoCreate, DesaparecidoResponse, DesaparecidoPublico
 from app.schemas.usuario import (
     UsuarioCreate, UsuarioLogin, TokenResponse,
-    RegistroResponse, VerificarEmailRequest, ReenviarEmailRequest, VerificarEmailResponse
+    RegistroResponse, VerificarEmailRequest, ReenviarEmailRequest, VerificarEmailResponse,
+    SolicitarResetPasswordRequest, RestablecerPasswordRequest
 )
 from app.core.config import get_settings
 from app.core.security import (
     validar_cedula_ec, encrypt_aes256, decrypt_aes256,
     hash_password, verify_password, create_jwt_token,
     create_verification_token, verify_verification_token,
+    create_password_reset_token, verify_password_reset_token,
     hash_cedula_blind_index
 )
-from app.core.email import send_verification_email
+from app.core.email import send_verification_email, send_password_reset_email
 
 router = APIRouter(prefix="/familiar", tags=["Módulo Familiar"])
 limiter = Limiter(key_func=get_remote_address)
@@ -311,6 +313,78 @@ async def reenviar_verificacion(
     background_tasks.add_task(send_verification_email, data.email, target_nombre, token)
 
     return {"message": "Se ha reenviado un nuevo correo de activación. Por favor revisa tu bandeja de entrada."}
+
+@router.post("/auth/solicitar-reset-password")
+@limiter.limit("3/15minutes")
+async def solicitar_reset_password(
+    request: Request,
+    data: SolicitarResetPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Solicita el restablecimiento de contraseña. Envía un correo con enlace JWT de 15 minutos.
+    Siempre responde 200 OK para no revelar si el email existe (OWASP).
+    """
+    result = await db.execute(select(Usuario))
+    target_user = None
+    target_nombre = "Usuario"
+
+    for u in result.scalars().all():
+        try:
+            decrypted_email = decrypt_aes256(u.email_cifrado, aes_key)
+            if decrypted_email.lower() == data.email.lower():
+                target_user = u
+                target_nombre = decrypt_aes256(u.nombre_cifrado, aes_key)
+                break
+        except Exception:
+            continue
+
+    # Siempre responder 200 para no revelar si el correo existe (OWASP)
+    if target_user and target_user.is_active:
+        token = create_password_reset_token(str(target_user.id), data.email)
+        background_tasks.add_task(send_password_reset_email, data.email, target_nombre, token)
+
+    return {
+        "message": "Si tu correo está registrado en la plataforma, recibirás un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada."
+    }
+
+
+@router.post("/auth/restablecer-password")
+async def restablecer_password(
+    request: Request,
+    data: RestablecerPasswordRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Restablece la contraseña usando un token JWT firmado de un solo uso.
+    """
+    payload = verify_password_reset_token(data.token)
+    user_id = uuid.UUID(payload["sub"])
+
+    result = await db.execute(select(Usuario).where(Usuario.id == user_id))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    user.password_hash = hash_password(data.nueva_password)
+    user.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+    # Registro de auditoría
+    audit_log = AuditLog(
+        id=uuid.uuid4(),
+        usuario_id=user.id,
+        accion="RESET_PASSWORD",
+        detalle=json.dumps({"metodo": "token_jwt_email"}),
+        ip_address=request.client.host if request.client else None,
+        timestamp=datetime.datetime.now(datetime.timezone.utc)
+    )
+    db.add(audit_log)
+
+    await db.commit()
+
+    return {"message": "Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."}
 
 
 @router.post("/auth/login", response_model=TokenResponse)

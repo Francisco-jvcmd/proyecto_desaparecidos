@@ -94,6 +94,16 @@ export const familiarApi = {
     apiRequest<{ access_token: string; token_type: string; rol: string }>(
       '/familiar/auth/login', { method: 'POST', body: data }
     ),
+
+  solicitarResetPassword: (email: string) =>
+    apiRequest<{ message: string }>(
+      '/familiar/auth/solicitar-reset-password', { method: 'POST', body: { email } }
+    ),
+
+  restablecerPassword: (token: string, nueva_password: string) =>
+    apiRequest<{ message: string }>(
+      '/familiar/auth/restablecer-password', { method: 'POST', body: { token, nueva_password } }
+    ),
 };
 
 // === Community Module ===
