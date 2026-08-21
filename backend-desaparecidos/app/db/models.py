@@ -87,6 +87,26 @@ class Desaparecido(Base):
     reportante: Mapped["Usuario"] = relationship(back_populates="casos", lazy="selectin")
     pistas: Mapped[list["Pista"]] = relationship(back_populates="desaparecido", lazy="selectin")
 
+    @property
+    def punto_a_lat(self) -> float:
+        if self.punto_a is None:
+            return 0.0
+        try:
+            from geoalchemy2.shape import to_shape
+            return float(to_shape(self.punto_a).y)
+        except Exception:
+            return 0.0
+
+    @property
+    def punto_a_lng(self) -> float:
+        if self.punto_a is None:
+            return 0.0
+        try:
+            from geoalchemy2.shape import to_shape
+            return float(to_shape(self.punto_a).x)
+        except Exception:
+            return 0.0
+
 class Pista(Base):
     __tablename__ = "pistas"
 

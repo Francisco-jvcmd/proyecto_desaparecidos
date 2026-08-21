@@ -66,6 +66,9 @@ async function apiRequest<T>(endpoint: string, options: ApiOptions = {}): Promis
 
 // === Familiar Module ===
 export const familiarApi = {
+  reportarCaso: (data: unknown, token: string) =>
+    apiRequest<any>('/familiar/reportar-caso', { method: 'POST', body: data, token }),
+
   registrarCaso: (data: unknown, token: string) =>
     apiRequest('/familiar/registro', { method: 'POST', body: data, token }),
     

@@ -27,6 +27,7 @@ class DesaparecidoBase(BaseModel):
     
     parroquia_desaparicion: str | None = None
     barrio: str | None = None
+    foto_url: str | None = None
 
     @field_validator("cedula_desaparecido")
     @classmethod
@@ -41,6 +42,9 @@ class DesaparecidoBase(BaseModel):
         if v > date.today():
             raise ValueError("La fecha de desaparición no puede estar en el futuro.")
         return v
+
+class ReportarCasoRequest(DesaparecidoBase):
+    consentimiento_firmado: Literal[True]
 
 class DesaparecidoCreate(DesaparecidoBase):
     consentimiento_firmado: Literal[True]
@@ -71,7 +75,12 @@ class DesaparecidoPublico(BaseModel):
     fecha_desaparicion: date
     punto_a_lat: float
     punto_a_lng: float
+    parroquia_desaparicion: str | None = None
+    barrio: str | None = None
+    ropa_descripcion: str | None = None
+    senas_particulares: str | None = None
     foto_url: str | None = None
+    afiche_url: str | None = None
     estado: str
     created_at: datetime
     

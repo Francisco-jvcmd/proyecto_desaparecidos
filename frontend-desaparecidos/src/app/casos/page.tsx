@@ -5,15 +5,6 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import { comunidadApi } from '@/lib/api';
 
-// Mock data as fallback
-const mockCasos = [
-  { id: '1', nombre: 'Juan Pérez', edad: 35, fecha: '2023-10-12', parroquia: 'La Mariscal', sexo: 'M' },
-  { id: '2', nombre: 'María Gómez', edad: 22, fecha: '2023-11-05', parroquia: 'Calderón', sexo: 'F' },
-  { id: '3', nombre: 'Carlos López', edad: 45, fecha: '2023-11-20', parroquia: 'Quitumbe', sexo: 'M' },
-  { id: '4', nombre: 'Ana Torres', edad: 19, fecha: '2024-01-10', parroquia: 'Tumbaco', sexo: 'F' },
-  { id: '5', nombre: 'Luis Simbaña', edad: 60, fecha: '2024-02-15', parroquia: 'Chillogallo', sexo: 'M' },
-];
-
 export default function CasosPage() {
   const [casos, setCasos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,14 +16,14 @@ export default function CasosPage() {
     const fetchCasos = async () => {
       try {
         const res = await comunidadApi.casosAprobados();
-        if (Array.isArray(res) && res.length > 0) {
-          setCasos(res as any[]);
+        if (Array.isArray(res)) {
+          setCasos(res);
         } else {
-          setCasos(mockCasos);
+          setCasos([]);
         }
       } catch (err) {
-        // Fallback
-        setCasos(mockCasos);
+        console.error('Error al cargar casos aprobados:', err);
+        setCasos([]);
       } finally {
         setLoading(false);
       }

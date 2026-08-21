@@ -9,7 +9,7 @@ import datetime
 
 from app.api.deps import get_db, get_current_user
 from app.db.models import Usuario, Desaparecido, RolUsuario, EstadoCaso, AuditLog
-from app.schemas.desaparecido import DesaparecidoCreate, DesaparecidoResponse, DesaparecidoPublico
+from app.schemas.desaparecido import DesaparecidoCreate, DesaparecidoResponse, DesaparecidoPublico, ReportarCasoRequest
 from app.schemas.usuario import (
     UsuarioCreate, UsuarioLogin, TokenResponse,
     RegistroResponse, VerificarEmailRequest, ReenviarEmailRequest, VerificarEmailResponse,
@@ -30,6 +30,66 @@ limiter = Limiter(key_func=get_remote_address)
 
 settings = get_settings()
 aes_key = bytes.fromhex(settings.AES_KEY)
+
+
+@router.post("/reportar-caso", response_model=DesaparecidoResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/15minutes")
+async def reportar_caso_autenticado(
+    request: Request,
+    data: ReportarCasoRequest,
+    current_user: Usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Registra un nuevo caso de desaparecido reportado por el usuario autenticado (FAMILIAR o ADMIN).
+    Valida cédula del desaparecido con Módulo 10, crea geometría PostGIS POINT para Punto A.
+    """
+    if not validar_cedula_ec(data.cedula_desaparecido):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cédula del desaparecido inválida según Módulo 10"
+        )
+
+    punto_a_wkt = f'SRID=4326;POINT({data.punto_a_lng} {data.punto_a_lat})'
+
+    nuevo_desaparecido = Desaparecido(
+        id=uuid.uuid4(),
+        nombres=data.nombres,
+        apellidos=data.apellidos,
+        cedula_desaparecido=data.cedula_desaparecido,
+        edad=data.edad,
+        sexo=data.sexo,
+        estatura_cm=data.estatura_cm,
+        complexion=data.complexion,
+        color_piel=data.color_piel,
+        color_cabello=data.color_cabello,
+        ropa_descripcion=data.ropa_descripcion,
+        senas_particulares=data.senas_particulares,
+        fecha_desaparicion=data.fecha_desaparicion,
+        hora_aproximada=data.hora_aproximada,
+        punto_a=punto_a_wkt,
+        parroquia_desaparicion=data.parroquia_desaparicion,
+        barrio=data.barrio,
+        foto_url=data.foto_url,
+        estado=EstadoCaso.PENDIENTE,
+        usuario_reportante_id=current_user.id,
+        consentimiento_firmado=True,
+    )
+    db.add(nuevo_desaparecido)
+
+    audit_log = AuditLog(
+        id=uuid.uuid4(),
+        usuario_id=current_user.id,
+        accion="REGISTRO_CASO",
+        detalle=json.dumps({"caso_id": str(nuevo_desaparecido.id)}),
+        ip_address=request.client.host if request.client else None,
+        timestamp=datetime.datetime.now(datetime.timezone.utc)
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(nuevo_desaparecido)
+    return nuevo_desaparecido
 
 
 @router.post("/registro", response_model=DesaparecidoResponse, status_code=status.HTTP_201_CREATED)
