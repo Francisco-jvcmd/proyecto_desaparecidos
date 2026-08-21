@@ -1,13 +1,31 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
+import { comunidadApi } from '@/lib/api';
 
 export default function Home() {
-  const mockCasos = [
-    { id: '1', nombre: 'Juan Pérez', edad: 35, fecha: '2023-10-12', parroquia: 'La Mariscal' },
-    { id: '2', nombre: 'María Gómez', edad: 22, fecha: '2023-11-05', parroquia: 'Calderón' },
-    { id: '3', nombre: 'Carlos López', edad: 45, fecha: '2023-11-20', parroquia: 'Quitumbe' },
-  ];
+  const [casos, setCasos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCasos = async () => {
+      try {
+        const res = await comunidadApi.casosAprobados();
+        if (Array.isArray(res)) {
+          setCasos(res);
+        } else {
+          setCasos([]);
+        }
+      } catch (err) {
+        console.error('Error al cargar casos en inicio:', err);
+        setCasos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCasos();
+  }, []);
 
   return (
     <div className="page-container">
@@ -50,24 +68,84 @@ export default function Home() {
           <p>Ayúdanos a encontrarlos. Si tienes información, colabora con una pista.</p>
         </div>
         
-        <div className="cases-grid">
-          {mockCasos.map(caso => (
-            <Link key={caso.id} href={`/casos/${caso.id}`}>
-              <Card className="case-card">
-                <div className="case-image-placeholder">👤</div>
-                <div className="case-body">
-                  <h3 className="case-name">{caso.nombre}</h3>
-                  <div className="case-meta">
-                    <span>Edad: {caso.edad} años</span>
-                    <span>•</span>
-                    <span>{caso.parroquia}</span>
-                  </div>
-                  <div className="case-date">Desapareció el: {caso.fecha}</div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {loading ? (
+          <div className="loading-container"><span className="spinner" /></div>
+        ) : casos.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: '1.125rem', marginBottom: '8px' }}>✓ No hay casos activos reportados en este momento.</p>
+            <p style={{ fontSize: '0.875rem' }}>Todos los casos validados aparecerán automáticamente en esta sección.</p>
+          </div>
+        ) : (
+          <div className="cases-grid">
+            {casos.slice(0, 6).map(caso => {
+              const displayName = caso.nombre || `${caso.nombres || ''} ${caso.apellidos || ''}`.trim();
+              const displayParroquia = caso.parroquia || caso.parroquia_desaparicion || 'DMQ';
+              const displayFecha = caso.fecha || caso.fecha_desaparicion || 'Sin fecha';
+
+              return (
+                <Link key={caso.id} href={`/casos/${caso.id}`}>
+                  <Card className="case-card" style={{ overflow: 'hidden', padding: 0 }}>
+                    <div style={{
+                      width: '100%',
+                      height: '220px',
+                      background: 'var(--bg-secondary)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {caso.foto_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={caso.foto_url}
+                          alt={displayName}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <div style={{ fontSize: '3.5rem', marginBottom: '4px' }}>👤</div>
+                          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sin Fotografía</span>
+                        </div>
+                      )}
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        background: 'rgba(220, 38, 38, 0.9)',
+                        color: 'white',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        backdropFilter: 'blur(4px)'
+                      }}>
+                        ALERTA ACTIVA
+                      </div>
+                    </div>
+                    <div className="case-body" style={{ padding: '16px' }}>
+                      <h3 className="case-name" style={{ fontSize: '1.125rem', marginBottom: '6px' }}>{displayName}</h3>
+                      <div className="case-meta" style={{ fontSize: '0.85rem', marginBottom: '8px' }}>
+                        <span>Edad: {caso.edad} años</span>
+                        <span>•</span>
+                        <span>{displayParroquia}</span>
+                      </div>
+                      <div className="case-date" style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                        Desapareció el: <strong style={{ color: 'var(--text-secondary)' }}>{displayFecha}</strong>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section style={{ margin: '80px 0', display: 'flex', flexDirection: 'column', gap: '32px' }}>
