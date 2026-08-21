@@ -211,34 +211,67 @@ export default function RegistroForm() {
 
   if (success) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px 24px', maxWidth: '520px', margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', padding: '40px 24px', maxWidth: '560px', margin: '0 auto' }}>
         <div style={{
-          width: '80px',
-          height: '80px',
+          width: '84px',
+          height: '84px',
           borderRadius: '50%',
           background: 'rgba(16, 185, 129, 0.15)',
           border: '2px solid rgba(16, 185, 129, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '2.5rem',
+          fontSize: '2.75rem',
           margin: '0 auto 20px',
           color: '#10b981'
         }}>
           ✓
         </div>
 
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>
-          ¡Reporte Enviado Exitosamente!
+        <div style={{
+          display: 'inline-block',
+          padding: '6px 14px',
+          borderRadius: '20px',
+          background: 'rgba(245, 158, 11, 0.15)',
+          border: '1px solid rgba(245, 158, 11, 0.4)',
+          color: '#fbbf24',
+          fontSize: '0.8125rem',
+          fontWeight: 700,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          marginBottom: '16px'
+        }}>
+          ⏳ Estado: Pendiente de Validación
+        </div>
+
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '12px', color: 'var(--text-primary)' }}>
+          ¡Reporte Ingresado Exitosamente!
         </h2>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '24px' }}>
-          {success} Una vez aprobado por el administrador, el afiche oficial y el modelo predictivo estarán activos.
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '20px' }}>
+          Tu reporte ha sido registrado en el sistema. Conforme a los protocolos de seguridad ciudadana y la <strong>Ley Orgánica de Protección de Datos Personales (LOPDP)</strong>, el equipo de administración validará la información para activar de inmediato la alerta oficial y el modelo predictivo geoespacial.
         </p>
+
+        <div style={{
+          padding: '14px 18px',
+          borderRadius: '10px',
+          background: 'rgba(56, 189, 248, 0.08)',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          color: '#38bdf8',
+          fontSize: '0.85rem',
+          textAlign: 'left',
+          marginBottom: '28px',
+          lineHeight: 1.5
+        }}>
+          ℹ️ <strong>¿Qué sucede ahora?</strong><br />
+          1. El administrador revisará los datos aportados.<br />
+          2. Al ser aprobado, se generará la ficha de difusión oficial y se publicará en el mapa comunitario.<br />
+          3. Podrás hacer seguimiento en tiempo real desde tu perfil.
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <Link href="/casos" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', textAlign: 'center' }}>
-            🔍 Ver Casos Activos
+            📁 Ver Casos en la Plataforma
           </Link>
           <button
             type="button"
@@ -256,7 +289,7 @@ export default function RegistroForm() {
             className="btn btn-outline"
             style={{ width: '100%', justifyContent: 'center', textAlign: 'center' }}
           >
-            📋 Reportar Otro Caso
+            📋 Reportar Otro Caso de Desaparición
           </button>
         </div>
       </div>

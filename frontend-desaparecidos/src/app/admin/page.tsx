@@ -258,12 +258,12 @@ export default function AdminPage() {
                         <td>{caso.fecha_desaparicion}</td>
                         <td><Badge estado={caso.estado} /></td>
                         <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <Button 
                               variant="primary" 
                               loading={actionLoading === caso.id}
                               onClick={() => handleAprobarCaso(caso.id)}
-                              style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                              style={{ padding: '6px 12px', fontSize: '0.75rem' }}
                             >
                               ✓ Aprobar
                             </Button>
@@ -271,10 +271,22 @@ export default function AdminPage() {
                               variant="danger" 
                               loading={actionLoading === caso.id}
                               onClick={() => handleRechazarCaso(caso.id)}
-                              style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                              style={{ padding: '6px 10px', fontSize: '0.75rem' }}
                             >
                               ✕ Rechazar
                             </Button>
+                            <a
+                              href={`https://wa.me/?text=${encodeURIComponent(
+                                `🚨 ALERTA OFICIAL DE BÚSQUEDA DMQ 🚨\n\n👤 Persona: ${caso.nombres} ${caso.apellidos}\n🎂 Edad: ${caso.edad} años (${caso.sexo})\n📍 Sector: ${caso.parroquia_desaparicion || caso.barrio || 'Quito'}\n🗓️ Fecha: ${caso.fecha_desaparicion}\n👕 Vestimenta: ${caso.ropa_descripcion || 'No detallada'}\n🔍 Señas: ${caso.senas_particulares || 'Ninguna'}\n\n🔗 Afiche oficial y reporte de pistas:\nhttps://proyecto-desaparecidos.vercel.app/casos/${caso.id}`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline"
+                              style={{ padding: '6px 10px', fontSize: '0.75rem', borderColor: '#25D366', color: '#25D366' }}
+                              title="Publicar en Canal de WhatsApp"
+                            >
+                              📢 Difundir
+                            </a>
                           </div>
                         </td>
                       </tr>

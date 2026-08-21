@@ -101,16 +101,62 @@ export default function CasosPage() {
 
             return (
               <Link key={caso.id} href={`/casos/${caso.id}`}>
-                <Card className="case-card">
-                  <div className="case-image-placeholder">👤</div>
-                  <div className="case-body">
-                    <h3 className="case-name">{displayName}</h3>
-                    <div className="case-meta">
+                <Card className="case-card" style={{ overflow: 'hidden', padding: 0 }}>
+                  <div style={{
+                    width: '100%',
+                    height: '240px',
+                    background: 'var(--bg-secondary)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {caso.foto_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={caso.foto_url}
+                        alt={displayName}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '4px' }}>👤</div>
+                        <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sin Fotografía</span>
+                      </div>
+                    )}
+                    <div style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      background: 'rgba(220, 38, 38, 0.9)',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      backdropFilter: 'blur(4px)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                    }}>
+                      ALERTA ACTIVA
+                    </div>
+                  </div>
+                  <div className="case-body" style={{ padding: '16px' }}>
+                    <h3 className="case-name" style={{ fontSize: '1.125rem', marginBottom: '6px' }}>{displayName}</h3>
+                    <div className="case-meta" style={{ fontSize: '0.85rem', marginBottom: '8px' }}>
                       <span>Edad: {caso.edad} años</span>
                       <span>•</span>
                       <span>{displayParroquia}</span>
                     </div>
-                    <div className="case-date">Desapareció el: {displayFecha}</div>
+                    <div className="case-date" style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                      Desapareció el: <strong style={{ color: 'var(--text-secondary)' }}>{displayFecha}</strong>
+                    </div>
                   </div>
                 </Card>
               </Link>

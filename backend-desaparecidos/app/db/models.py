@@ -122,6 +122,26 @@ class Pista(Base):
     desaparecido: Mapped["Desaparecido"] = relationship(back_populates="pistas", lazy="selectin")
     usuario: Mapped["Usuario"] = relationship(back_populates="pistas", lazy="selectin")
 
+    @property
+    def lat(self) -> float | None:
+        if self.ubicacion is None:
+            return None
+        try:
+            from geoalchemy2.shape import to_shape
+            return float(to_shape(self.ubicacion).y)
+        except Exception:
+            return None
+
+    @property
+    def lng(self) -> float | None:
+        if self.ubicacion is None:
+            return None
+        try:
+            from geoalchemy2.shape import to_shape
+            return float(to_shape(self.ubicacion).x)
+        except Exception:
+            return None
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

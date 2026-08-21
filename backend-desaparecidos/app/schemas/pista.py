@@ -17,6 +17,8 @@ class PistaResponse(BaseModel):
     desaparecido_id: UUID
     descripcion: str
     foto_url: str | None = None
+    lat: float | None = None
+    lng: float | None = None
     estado: str
     created_at: datetime
 
